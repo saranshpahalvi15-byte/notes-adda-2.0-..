@@ -106,12 +106,18 @@ export default function Checkout() {
           }),
         });
         
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+
         const data = await response.json();
         if (data.previewUrl) {
           setEmailPreviewUrl(data.previewUrl);
         }
       } catch (emailErr) {
         console.error("Failed to send email receipt:", emailErr);
+        // We still set success to true because the order was saved, but we can alert the user
+        alert("Payment was successful, but there was an issue sending the email receipt. Please check your dashboard for your notes.");
       }
 
       setSuccess(true);
