@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "saransh1860@gmail.com" && request.auth.token.email_verified == true) ||
+         request.auth.token.email == "admin@vidyanotes.com" ||
+         request.auth.token.email == "masteradmin@vidyanotes.com");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'name', 'role', 'referralCode', 'referredBy', 'wishlist', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['user', 'admin'] &&
+             data.referralCode is string && data.referralCode.size() > 0 && data.referralCode.size() < 20 &&
+             (!('referredBy' in data) || (data.referredBy is string && data.referredBy.size() < 20)) &&
+             (!('wishlist' in data) || data.wishlist is list) &&
+             data.createdAt is string;
+    }
+
+    function isValidNote(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'description', 'classLevel', 'subject', 'price', 'pdfUrl', 'previewImages', 'isFeatured', 'rating', 'reviewCount', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 5000 &&
+             data.classLevel in ['9', '10', '11', '12'] &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() < 50 &&
+             data.price is number && data.price >= 0 &&
+             data.pdfUrl is string && data.pdfUrl.size() > 0 && data.pdfUrl.size() < 1000 &&
+             data.previewImages is list && data.previewImages.size() >= 0 && data.previewImages.size() <= 10 &&
+             (!('isFeatured' in data) || data.isFeatured is bool) &&
+             (!('rating' in data) || data.rating is number) &&
+             (!('reviewCount' in data) || data.reviewCount is number) &&
+             data.createdAt is string;
+    }
+
+    function isValidBundle(data) {
+      return hasOnlyAllowedFields(['id', 'title', 'description', 'classLevel', 'subject', 'price', 'noteIds', 'pdfUrl', 'previewImages', 'isFeatured', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 5000 &&
+             data.classLevel in ['9', '10', '11', '12'] &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() < 50 &&
+             data.price is number && data.price >= 0 &&
+             data.noteIds is list && data.noteIds.size() >= 0 && data.noteIds.size() <= 50 &&
+             (!('pdfUrl' in data) || (data.pdfUrl is string && data.pdfUrl.size() <= 1000)) &&
+             (!('previewImages' in data) || (data.previewImages is list && data.previewImages.size() >= 0 && data.previewImages.size() <= 20)) &&
+             (!('isFeatured' in data) || data.isFeatured is bool) &&
+             data.createdAt is string;
+    }
+
+    function isValidReview(data) {
+      return hasOnlyAllowedFields(['id', 'noteId', 'userId', 'userName', 'rating', 'comment', 'createdAt']) &&
+             data.noteId is string && data.noteId.size() > 0 &&
+             data.userId is string && data.userId.size() > 0 &&
+             data.userName is string && data.userName.size() > 0 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000 &&
+             data.createdAt is string;
+    }
+
+    function isValidOrder(data) {
+      return hasOnlyAllowedFields(['id', 'userId', 'items', 'subtotal', 'discountApplied', 'totalAmount', 'status', 'createdAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             data.items is list && data.items.size() > 0 && data.items.size() <= 100 &&
+             data.subtotal is number && data.subtotal >= 0 &&
+             data.discountApplied is number && data.discountApplied >= 0 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.status in ['pending', 'completed', 'failed'] &&
+             data.createdAt is string;
+    }
+
+    function isValidCoupon(data) {
+      return hasOnlyAllowedFields(['code', 'discountPercent', 'isActive', 'createdAt']) &&
+             data.code is string && data.code.size() > 0 && data.code.size() < 50 &&
+             data.discountPercent is number && data.discountPercent > 0 && data.discountPercent <= 100 &&
+             data.isActive is bool &&
+             data.createdAt is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /notes/{noteId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidNote(request.resource.data);
+      allow update: if isAdmin() && isValidNote(request.resource.data) || 
+                    (isAuthenticated() && isValidNote(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
+      allow delete: if isAdmin();
+    }
+
+    match /bundles/{bundleId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidBundle(request.resource.data);
+      allow update: if isAdmin() && isValidBundle(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidReview(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isAdmin() || (isAuthenticated() && isOwner(resource.data.userId) && isValidReview(request.resource.data));
+      allow delete: if isAdmin() || (isAuthenticated() && isOwner(resource.data.userId));
+    }
+
+    match /orders/{orderId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data) && 
+                    isOwner(request.resource.data.userId);
+      allow update: if isAdmin() && isValidOrder(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /coupons/{couponId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidCoupon(request.resource.data);
+      allow update: if isAdmin() && isValidCoupon(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the platform (student or admin)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "referralCode": { "type": "string" },
+        "referredBy": { "type": "string" },
+        "wishlist": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "role", "referralCode"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "A single chapter note",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "classLevel": { "type": "string", "enum": ["9", "10", "11", "12"] },
+        "subject": { "type": "string" },
+        "price": { "type": "number" },
+        "pdfUrl": { "type": "string" },
+        "previewImages": { "type": "array", "items": { "type": "string" } },
+        "isFeatured": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "classLevel", "subject", "price", "pdfUrl", "previewImages"]
+    },
+    "Bundle": {
+      "title": "Bundle",
+      "description": "A bundle of chapter notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "classLevel": { "type": "string", "enum": ["9", "10", "11", "12"] },
+        "subject": { "type": "string" },
+        "price": { "type": "number" },
+        "noteIds": { "type": "array", "items": { "type": "string" } },
+        "isFeatured": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "classLevel", "subject", "price", "noteIds"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A user review for a note",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noteId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["noteId", "userId", "userName", "rating", "comment"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A purchase order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "itemId": { "type": "string" },
+              "type": { "type": "string", "enum": ["note", "bundle"] },
+              "price": { "type": "number" }
+            }
+          }
+        },
+        "subtotal": { "type": "number" },
+        "discountApplied": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "items", "subtotal", "discountApplied", "totalAmount", "status"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "A discount coupon created by admin",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "discountPercent": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "discountPercent", "isActive"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": { "$ref": "#/entities/User" }, "description": "User profiles" },
+    "/notes/{noteId}": { "schema": { "$ref": "#/entities/Note" }, "description": "Chapter notes" },
+    "/bundles/{bundleId}": { "schema": { "$ref": "#/entities/Bundle" }, "description": "Note bundles" },
+    "/reviews/{reviewId}": { "schema": { "$ref": "#/entities/Review" }, "description": "User reviews" },
+    "/orders/{orderId}": { "schema": { "$ref": "#/entities/Order" }, "description": "User orders" },
+    "/coupons/{couponId}": { "schema": { "$ref": "#/entities/Coupon" }, "description": "Discount coupons" }
+  }
+}

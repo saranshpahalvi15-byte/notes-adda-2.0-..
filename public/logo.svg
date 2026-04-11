@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#c2410c" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Book Back Cover -->
+  <rect x="80" y="60" width="240" height="280" rx="24" fill="url(#primary)" filter="url(#shadow)" />
+  
+  <!-- Pages -->
+  <path d="M 110 70 h 190 a 16 16 0 0 1 16 16 v 248 a 16 16 0 0 1 -16 16 h -190 a 0 0 0 0 1 0 0 v -280 z" fill="#ffffff" />
+  <path d="M 100 80 h 200 a 16 16 0 0 1 16 16 v 228 a 16 16 0 0 1 -16 16 h -200 a 0 0 0 0 1 0 0 v -260 z" fill="#f8fafc" />
+
+  <!-- Text Lines -->
+  <rect x="150" y="130" width="120" height="12" rx="6" fill="#e2e8f0" />
+  <rect x="150" y="170" width="100" height="12" rx="6" fill="#e2e8f0" />
+  <rect x="150" y="210" width="130" height="12" rx="6" fill="#e2e8f0" />
+
+  <!-- Location Pin (Adda) -->
+  <path d="M 260 210 c -22 0 -40 18 -40 40 c 0 30 40 70 40 70 c 0 0 40 -40 40 -70 c 0 -22 -18 -40 -40 -40 z m 0 56 c -8.8 0 -16 -7.2 -16 -16 s 7.2 -16 16 -16 s 16 7.2 16 16 s -7.2 16 -16 16 z" fill="url(#accent)" filter="url(#shadow)" />
+
+  <!-- Binding Rings -->
+  <circle cx="80" cy="100" r="16" fill="#1e1b4b" />
+  <circle cx="80" cy="160" r="16" fill="#1e1b4b" />
+  <circle cx="80" cy="220" r="16" fill="#1e1b4b" />
+  <circle cx="80" cy="280" r="16" fill="#1e1b4b" />
+  
+  <!-- Ring Highlights -->
+  <circle cx="76" cy="96" r="6" fill="#4f46e5" />
+  <circle cx="76" cy="156" r="6" fill="#4f46e5" />
+  <circle cx="76" cy="216" r="6" fill="#4f46e5" />
+  <circle cx="76" cy="276" r="6" fill="#4f46e5" />
+</svg>
