@@ -52,9 +52,11 @@ async function startServer() {
       let transporter;
       
       if (process.env.SMTP_PASS) {
-        // Use Gmail with the provided App Password
+        // Use Gmail with explicit SMTP settings
         transporter = nodemailer.createTransport({
-          service: 'gmail',
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true, // use SSL
           auth: {
             user: 'saransh1860@gmail.com',
             pass: process.env.SMTP_PASS,
@@ -130,16 +132,19 @@ async function startServer() {
         `,
       });
 
+      console.log("Email sent successfully. Message ID: %s", info.messageId);
       const previewUrl = nodemailer.getTestMessageUrl(info);
-      console.log("Message sent: %s", info.messageId);
       if (previewUrl) {
-        console.log("Preview URL: %s", previewUrl);
+        console.log("Preview URL (Ethereal): %s", previewUrl);
       }
 
       res.json({ success: true, previewUrl });
-    } catch (error) {
-      console.error("Error sending email:", error);
-      res.status(500).json({ error: "Failed to send email" });
+    } catch (error: any) {
+      console.error("CRITICAL: Error sending email:", error.message || error);
+      if (error.response) {
+        console.error("SMTP Response:", error.response);
+      }
+      res.status(500).json({ error: "Failed to send email", details: error.message });
     }
   });
 
