@@ -1,10 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export default function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,12 +41,26 @@ ${history}
 User: ${userMessage}
 Assistant:`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
+      const env = (import.meta as any).env;
+      const apiUrl = env.VITE_API_URL 
+        ? `${env.VITE_API_URL}/api/chat` 
+        : '/api/chat';
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
       });
 
-      setMessages(prev => [...prev, { role: 'model', text: response.text || 'Sorry, I could not generate a response.' }]);
+      if (!response.ok) {
+        throw new Error('Failed to fetch AI response');
+      }
+
+      const data = await response.json();
+
+      setMessages(prev => [...prev, { role: 'model', text: data.text || 'Sorry, I could not generate a response.' }]);
     } catch (error) {
       console.error('Error generating AI response:', error);
       setMessages(prev => [...prev, { role: 'model', text: 'Sorry, I encountered an error while trying to answer your question. Please try again later.' }]);

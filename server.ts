@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import path from "path";
 import cors from "cors";
+import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
   const app = express();
@@ -12,9 +13,31 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
+  // Initialize Gemini AI
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
   // API routes FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      });
+
+      res.json({ text: response.text });
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      res.status(500).json({ error: "Failed to generate response" });
+    }
   });
 
   app.post("/api/send-receipt", async (req, res) => {
