@@ -15,7 +15,6 @@ async function startServer() {
 
   // Initialize Gemini AI
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-  const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   // API routes FIRST
   app.get("/api/health", (req, res) => {
@@ -37,12 +36,14 @@ async function startServer() {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const result = await model.generateContentStream(prompt);
+      const responseStream = await ai.models.generateContentStream({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+      });
 
-      for await (const chunk of result.stream) {
-        const chunkText = chunk.text();
-        if (chunkText) {
-          res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+      for await (const chunk of responseStream) {
+        if (chunk.text) {
+          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
         }
       }
       res.write('data: [DONE]\n\n');
