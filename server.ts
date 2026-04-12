@@ -14,7 +14,8 @@ async function startServer() {
   app.use(express.json());
 
   // Initialize Gemini AI
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = new GoogleGenAI(process.env.GEMINI_API_KEY || '');
+  const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   // API routes FIRST
   app.get("/api/health", (req, res) => {
@@ -28,28 +29,30 @@ async function startServer() {
         return res.status(400).json({ error: "Prompt is required" });
       }
 
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "Gemini API Key is not configured" });
+      }
+
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const responseStream = await ai.models.generateContentStream({
-        model: 'gemini-3-flash-preview',
-        contents: prompt,
-      });
+      const result = await model.generateContentStream(prompt);
 
-      for await (const chunk of responseStream) {
-        if (chunk.text) {
-          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        if (chunkText) {
+          res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
         }
       }
       res.write('data: [DONE]\n\n');
       res.end();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating AI response:', error);
       if (!res.headersSent) {
-        res.status(500).json({ error: "Failed to generate response" });
+        res.status(500).json({ error: "Failed to generate response", details: error.message });
       } else {
-        res.write(`data: ${JSON.stringify({ error: "Failed to generate response" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: error.message || "Failed to generate response" })}\n\n`);
         res.end();
       }
     }

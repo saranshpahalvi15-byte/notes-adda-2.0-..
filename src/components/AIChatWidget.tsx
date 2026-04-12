@@ -67,30 +67,49 @@ Assistant:`;
       setIsLoading(false); // Turn off loading dots once stream starts
 
       if (reader) {
+        let buffer = '';
+        let hasReceivedData = false;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          
+          // Keep the last partial line in the buffer
+          buffer = lines.pop() || '';
           
           for (const line of lines) {
-            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || trimmedLine === 'data: [DONE]') continue;
+            
+            if (trimmedLine.startsWith('data: ')) {
               try {
-                const data = JSON.parse(line.slice(6));
+                const data = JSON.parse(trimmedLine.slice(6));
                 if (data.text) {
+                  hasReceivedData = true;
                   aiResponse += data.text;
                   setMessages(prev => {
                     const newMessages = [...prev];
                     newMessages[newMessages.length - 1].text = aiResponse;
                     return newMessages;
                   });
+                } else if (data.error) {
+                  throw new Error(data.error);
                 }
               } catch (e) {
                 console.error('Error parsing stream chunk', e);
               }
             }
           }
+        }
+        
+        if (!hasReceivedData) {
+          setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1].text = 'Sorry, I could not generate a response. Please try again.';
+            return newMessages;
+          });
         }
       }
     } catch (error) {
