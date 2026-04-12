@@ -14,31 +14,61 @@ async function startServer() {
   app.use(express.json());
 
   // Initialize Gemini AI
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+  const apiKey = process.env.CUSTOM_API_KEY || process.env.GEMINI_API_KEY || '';
+  console.log("API KEY PREFIX:", apiKey ? apiKey.substring(0, 5) : "MISSING");
+  const ai = new GoogleGenAI({ apiKey: apiKey });
 
   // API routes FIRST
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
+  app.get("/api/debug-env", (req, res) => {
+    import('fs').then(fs => fs.writeFileSync('server-env-dump.json', JSON.stringify(process.env, null, 2)));
+    res.json({ 
+      hasKey: !!apiKey,
+      keyPrefix: apiKey ? apiKey.substring(0, 5) : "MISSING",
+      keyLength: apiKey ? apiKey.length : 0
+    });
+  });
+
   app.post("/api/chat", async (req, res) => {
     try {
-      const { prompt } = req.body;
-      if (!prompt) {
-        return res.status(400).json({ error: "Prompt is required" });
+      const { messages } = req.body;
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Messages array is required" });
       }
 
-      if (!process.env.GEMINI_API_KEY) {
-        return res.status(500).json({ error: "Gemini API Key is not configured" });
+      if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+        return res.status(500).json({ error: "Please configure CUSTOM_API_KEY in settings" });
       }
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
+      // Format messages for the Gemini API
+      const contents = messages.map((msg: any) => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      }));
+
+      const systemInstruction = `You are an elite, highly capable AI Tutor and Academic Assistant for 'Notes Adda', a premium digital marketplace for student notes (Classes 9-12 in India). 
+Your capabilities:
+- You explain complex academic concepts (Math, Science, History, etc.) with extreme clarity, using analogies and step-by-step breakdowns.
+- You format your responses beautifully using Markdown (bolding key terms, using bullet points, and providing code blocks or math formulas where appropriate).
+- You are encouraging, patient, and adapt to the student's level of understanding.
+- You help students navigate the Notes Adda platform and recommend studying strategies.
+- If asked a question outside of academics or the platform, politely guide the conversation back to their studies.
+Always strive to be the most helpful, insightful, and powerful tutor they have ever interacted with.`;
+
       const responseStream = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
+        model: 'gemini-3-flash-preview', // Switched to 3-flash-preview as per SDK guidelines
+        contents: contents,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.7,
+        }
       });
 
       for await (const chunk of responseStream) {
@@ -50,10 +80,11 @@ async function startServer() {
       res.end();
     } catch (error: any) {
       console.error('Error generating AI response:', error);
+      const keyPrefix = apiKey ? apiKey.substring(0, 5) : "MISSING";
       if (!res.headersSent) {
-        res.status(500).json({ error: "Failed to generate response", details: error.message });
+        res.status(500).json({ error: "Failed to generate response", details: `${error.message} (Key prefix: ${keyPrefix})` });
       } else {
-        res.write(`data: ${JSON.stringify({ error: error.message || "Failed to generate response" })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: `${error.message || "Failed to generate response"} (Key prefix: ${keyPrefix})` })}\n\n`);
         res.end();
       }
     }

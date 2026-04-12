@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Sparkles, Trash2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export default function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([
-    { role: 'model', text: 'Hi! I am the Notes Adda AI Assistant. How can I help you with your doubts today?' }
+    { role: 'model', text: 'Hi! I am the new, upgraded **Notes Adda AI Tutor**. I am powered by an advanced reasoning model to help you with complex academic concepts, exam prep, and platform navigation. How can I help you excel today?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -20,27 +20,24 @@ export default function AIChatWidget() {
     scrollToBottom();
   }, [messages, isOpen]);
 
+  const clearChat = () => {
+    setMessages([
+      { role: 'model', text: 'Hi! I am the new, upgraded **Notes Adda AI Tutor**. I am powered by an advanced reasoning model to help you with complex academic concepts, exam prep, and platform navigation. How can I help you excel today?' }
+    ]);
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    
+    const newMessages = [...messages, { role: 'user' as const, text: userMessage }];
+    setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      // Build conversation history for context
-      const history = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
-      const prompt = `You are a helpful AI tutor and assistant for Notes Adda, a digital marketplace for student notes (Classes 9-12 in India).
-Your goal is to resolve student doubts, answer questions about subjects, and help them navigate the platform.
-Keep your answers concise, encouraging, and easy to understand for students.
-
-Conversation History:
-${history}
-User: ${userMessage}
-Assistant:`;
-
       const env = (import.meta as any).env;
       const apiUrl = env.VITE_API_URL 
         ? `${env.VITE_API_URL}/api/chat` 
@@ -51,7 +48,8 @@ Assistant:`;
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt }),
+        // Send the entire conversation history for better context
+        body: JSON.stringify({ messages: newMessages }),
       });
 
       if (!response.ok) {
@@ -98,9 +96,9 @@ Assistant:`;
                   hasReceivedData = true;
                   aiResponse += data.text;
                   setMessages(prev => {
-                    const newMessages = [...prev];
-                    newMessages[newMessages.length - 1].text = aiResponse;
-                    return newMessages;
+                    const updated = [...prev];
+                    updated[updated.length - 1].text = aiResponse;
+                    return updated;
                   });
                 } else if (data.error) {
                   throw new Error(data.error);
@@ -114,23 +112,23 @@ Assistant:`;
         
         if (!hasReceivedData) {
           setMessages(prev => {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1].text = 'Sorry, I could not generate a response. Please try again.';
-            return newMessages;
+            const updated = [...prev];
+            updated[updated.length - 1].text = 'Sorry, I could not generate a response. Please try again.';
+            return updated;
           });
         }
       }
     } catch (error: any) {
       console.error('Error generating AI response:', error);
       setMessages(prev => {
-        const newMessages = [...prev];
+        const updated = [...prev];
         // If the last message is from the model and is empty, replace it
-        if (newMessages[newMessages.length - 1].role === 'model' && !newMessages[newMessages.length - 1].text) {
-          newMessages[newMessages.length - 1].text = `Error: ${error.message || 'Please try again later.'}`;
+        if (updated[updated.length - 1].role === 'model' && !updated[updated.length - 1].text) {
+          updated[updated.length - 1].text = `Error: ${error.message || 'Please try again later.'}`;
         } else {
-          newMessages.push({ role: 'model', text: `Error: ${error.message || 'Please try again later.'}` });
+          updated.push({ role: 'model', text: `Error: ${error.message || 'Please try again later.'}` });
         }
-        return newMessages;
+        return updated;
       });
     } finally {
       setIsLoading(false);
@@ -142,45 +140,56 @@ Assistant:`;
       {/* Chat Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 p-4 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all z-50 ${isOpen ? 'scale-0' : 'scale-100'}`}
+        className={`fixed bottom-6 right-6 p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-indigo-500/50 hover:scale-105 transition-all z-50 flex items-center justify-center ${isOpen ? 'scale-0' : 'scale-100'}`}
       >
-        <MessageCircle className="w-6 h-6" />
+        <Sparkles className="w-6 h-6 absolute animate-ping opacity-20" />
+        <MessageCircle className="w-6 h-6 relative z-10" />
       </button>
 
       {/* Chat Window */}
-      <div className={`fixed bottom-6 right-6 w-96 h-[500px] max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 transition-all transform origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+      <div className={`fixed bottom-6 right-6 w-[450px] h-[600px] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-3rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50 transition-all transform origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
         {/* Header */}
-        <div className="p-4 bg-indigo-600 text-white rounded-t-2xl flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Bot className="w-6 h-6" />
-            <span className="font-semibold">AI Tutor</span>
+        <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-t-2xl flex justify-between items-center shadow-md z-10">
+          <div className="flex items-center space-x-3">
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+              <Sparkles className="w-5 h-5 text-indigo-100" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg leading-tight">AI Tutor Pro</h3>
+              <p className="text-xs text-indigo-200 font-medium">Powered by Gemini 2.5 Pro</p>
+            </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="text-indigo-100 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button onClick={clearChat} className="p-2 text-indigo-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Clear Chat">
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button onClick={() => setIsOpen(false)} className="p-2 text-indigo-100 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-gray-50/50">
           {messages.map((msg, index) => (
             <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl p-3 ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'}`}>
+              <div className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-sm' : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm'}`}>
                 {msg.role === 'model' ? (
-                  <div className="prose prose-sm prose-indigo max-w-none">
+                  <div className="prose prose-sm prose-indigo max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100">
                     <Markdown remarkPlugins={[remarkGfm]}>{msg.text}</Markdown>
                   </div>
                 ) : (
-                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
                 )}
               </div>
             </div>
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm p-4 shadow-sm flex space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm p-4 shadow-sm flex space-x-2 items-center h-12">
+                <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
               </div>
             </div>
           )}
@@ -188,23 +197,32 @@ Assistant:`;
         </div>
 
         {/* Input */}
-        <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-200 rounded-b-2xl">
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question..."
-              className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
+        <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-100 rounded-b-2xl">
+          <div className="flex space-x-3 items-end">
+            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
+                placeholder="Ask a complex question..."
+                className="w-full max-h-32 min-h-[44px] bg-transparent px-4 py-3 text-sm focus:outline-none resize-none"
+                rows={1}
+              />
+            </div>
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex-shrink-0"
             >
               <Send className="w-5 h-5" />
             </button>
           </div>
+          <p className="text-center text-[10px] text-gray-400 mt-2">AI can make mistakes. Verify important academic information.</p>
         </form>
       </div>
     </>
