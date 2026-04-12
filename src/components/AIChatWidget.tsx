@@ -55,7 +55,14 @@ Assistant:`;
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch AI response');
+        let errorMessage = `Server error: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) errorMessage = errorData.error;
+        } catch (e) {
+          // Ignore json parse error
+        }
+        throw new Error(errorMessage);
       }
 
       const reader = response.body?.getReader();
@@ -112,9 +119,18 @@ Assistant:`;
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating AI response:', error);
-      setMessages(prev => [...prev, { role: 'model', text: 'Sorry, I encountered an error while trying to answer your question. Please try again later.' }]);
+      setMessages(prev => {
+        const newMessages = [...prev];
+        // If the last message is from the model and is empty, replace it
+        if (newMessages[newMessages.length - 1].role === 'model' && !newMessages[newMessages.length - 1].text) {
+          newMessages[newMessages.length - 1].text = `Error: ${error.message || 'Please try again later.'}`;
+        } else {
+          newMessages.push({ role: 'model', text: `Error: ${error.message || 'Please try again later.'}` });
+        }
+        return newMessages;
+      });
     } finally {
       setIsLoading(false);
     }
