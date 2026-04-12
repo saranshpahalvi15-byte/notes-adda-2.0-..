@@ -59,6 +59,7 @@ Assistant:`;
         try {
           const errorData = await response.json();
           if (errorData.error) errorMessage = errorData.error;
+          if (errorData.details) errorMessage += `: ${errorData.details}`;
         } catch (e) {
           // Ignore json parse error
         }
