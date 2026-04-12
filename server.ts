@@ -14,7 +14,7 @@ async function startServer() {
   app.use(express.json());
 
   // Initialize Gemini AI
-  const ai = new GoogleGenAI(process.env.GEMINI_API_KEY || '');
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
   const model = ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
   // API routes FIRST
