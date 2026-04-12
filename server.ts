@@ -28,15 +28,30 @@ async function startServer() {
         return res.status(400).json({ error: "Prompt is required" });
       }
 
-      const response = await ai.models.generateContent({
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const responseStream = await ai.models.generateContentStream({
         model: 'gemini-3-flash-preview',
         contents: prompt,
       });
 
-      res.json({ text: response.text });
+      for await (const chunk of responseStream) {
+        if (chunk.text) {
+          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+        }
+      }
+      res.write('data: [DONE]\n\n');
+      res.end();
     } catch (error) {
       console.error('Error generating AI response:', error);
-      res.status(500).json({ error: "Failed to generate response" });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to generate response" });
+      } else {
+        res.write(`data: ${JSON.stringify({ error: "Failed to generate response" })}\n\n`);
+        res.end();
+      }
     }
   });
 

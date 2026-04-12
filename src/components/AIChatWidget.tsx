@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 export default function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([
-    { role: 'model', text: 'Hi! I am the VidyaNotes AI Assistant. How can I help you with your doubts today?' }
+    { role: 'model', text: 'Hi! I am the Notes Adda AI Assistant. How can I help you with your doubts today?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +32,7 @@ export default function AIChatWidget() {
     try {
       // Build conversation history for context
       const history = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
-      const prompt = `You are a helpful AI tutor and assistant for VidyaNotes, a digital marketplace for student notes (Classes 9-12 in India).
+      const prompt = `You are a helpful AI tutor and assistant for Notes Adda, a digital marketplace for student notes (Classes 9-12 in India).
 Your goal is to resolve student doubts, answer questions about subjects, and help them navigate the platform.
 Keep your answers concise, encouraging, and easy to understand for students.
 
@@ -58,9 +58,41 @@ Assistant:`;
         throw new Error('Failed to fetch AI response');
       }
 
-      const data = await response.json();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let aiResponse = '';
 
-      setMessages(prev => [...prev, { role: 'model', text: data.text || 'Sorry, I could not generate a response.' }]);
+      // Add an empty model message that we will update as chunks arrive
+      setMessages(prev => [...prev, { role: 'model', text: '' }]);
+      setIsLoading(false); // Turn off loading dots once stream starts
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.text) {
+                  aiResponse += data.text;
+                  setMessages(prev => {
+                    const newMessages = [...prev];
+                    newMessages[newMessages.length - 1].text = aiResponse;
+                    return newMessages;
+                  });
+                }
+              } catch (e) {
+                console.error('Error parsing stream chunk', e);
+              }
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Error generating AI response:', error);
       setMessages(prev => [...prev, { role: 'model', text: 'Sorry, I encountered an error while trying to answer your question. Please try again later.' }]);
