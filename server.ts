@@ -107,6 +107,7 @@ Always strive to be the most helpful, insightful, and powerful tutor they have e
           host: 'smtp.gmail.com',
           port: 465,
           secure: true, // use SSL
+          family: 4, // Force IPv4 to fix ENETUNREACH on Render
           auth: {
             user: 'saransh1860@gmail.com',
             pass: process.env.SMTP_PASS,
