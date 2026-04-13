@@ -53,10 +53,10 @@ export default function Home() {
       <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 bg-indigo-50 rounded-3xl mb-12 text-center px-4">
         <div className="max-w-3xl mx-auto space-y-6">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-indigo-900">
-            Ace Your Exams with Premium Notes
+            Welcome to Notes Adda
           </h1>
           <p className="text-xl text-indigo-700 max-w-2xl mx-auto">
-            High-quality, handwritten and printed PDF notes for Classes 9-12. 
+            Ace your exams with premium, high-quality, handwritten and printed PDF notes for Classes 9-12. 
             Instant download, affordable prices, and guaranteed success.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
