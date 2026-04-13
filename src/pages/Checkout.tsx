@@ -4,7 +4,6 @@ import { collection, query, where, getDocs, addDoc, doc, getDoc } from 'firebase
 import { db } from '../firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { CheckCircle, AlertCircle, CreditCard } from 'lucide-react';
-import emailjs from '@emailjs/browser';
 
 export default function Checkout() {
   const location = useLocation();
@@ -17,7 +16,6 @@ export default function Checkout() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [emailPreviewUrl, setEmailPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -87,87 +85,12 @@ export default function Checkout() {
 
       await addDoc(collection(db, 'orders'), orderData);
       
-      // Send email receipt via EmailJS
-      try {
-        const env = (import.meta as any).env;
-        const serviceId = env.VITE_EMAILJS_SERVICE_ID;
-        const templateId = env.VITE_EMAILJS_TEMPLATE_ID;
-        const publicKey = env.VITE_EMAILJS_PUBLIC_KEY;
-
-        if (serviceId && templateId && publicKey) {
-          // Generate HTML for items
-          const itemsHtml = items.map((item: any) => {
-            // Convert drive/dropbox links to direct download links
-            let downloadUrl = item.pdfUrl || '';
-            try {
-              const urlObj = new URL(downloadUrl);
-              if (urlObj.hostname.includes('drive.google.com')) {
-                const match = downloadUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-                if (match && match[1]) {
-                  downloadUrl = `https://drive.google.com/uc?export=download&id=${match[1]}`;
-                } else {
-                  const id = urlObj.searchParams.get('id');
-                  if (id) {
-                    downloadUrl = `https://drive.google.com/uc?export=download&id=${id}`;
-                  }
-                }
-              } else if (urlObj.hostname.includes('dropbox.com')) {
-                urlObj.searchParams.set('dl', '1');
-                downloadUrl = urlObj.toString();
-              }
-            } catch (e) {
-              // ignore invalid URLs
-            }
-
-            return `
-              <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                <h3 style="margin-top: 0; color: #111827;">${item.title}</h3>
-                <p style="color: #4b5563; margin-bottom: 15px;">Price: ₹${item.price}</p>
-                ${downloadUrl 
-                  ? `<a href="${downloadUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Download PDF</a>`
-                  : `<p style="color: #4b5563; font-style: italic;">Please visit your dashboard to view the contents of this bundle.</p>`
-                }
-              </div>
-            `;
-          }).join('');
-
-          const fullHtmlContent = `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h1 style="color: #4f46e5;">Thank you for your purchase, ${profile?.name || 'Student'}!</h1>
-              <p style="color: #374151; font-size: 16px;">Your payment of <strong>₹${total}</strong> was successful. You can download your purchased notes below:</p>
-              
-              <div style="margin-top: 30px;">
-                ${itemsHtml}
-              </div>
-              
-              <p style="color: #6b7280; font-size: 14px; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                If you have any questions, please reply to this email or use our AI Tutor on the website.
-              </p>
-            </div>
-          `;
-
-          const templateParams = {
-            to_name: profile?.name || 'Student',
-            to_email: user.email,
-            html_content: fullHtmlContent
-          };
-
-          await emailjs.send(serviceId, templateId, templateParams, publicKey);
-        } else {
-          console.warn("EmailJS credentials missing. Skipping email receipt.");
-        }
-      } catch (emailErr: any) {
-        console.error("Failed to send email receipt:", emailErr);
-        // We still set success to true because the order was saved, but we can alert the user
-        alert(`Payment was successful, but there was an issue sending the email receipt. Please check your dashboard for your notes.`);
-      }
-
       setSuccess(true);
       
-      // Redirect to dashboard after 5 seconds (giving them time to see the email link if testing)
+      // Redirect to dashboard after 3 seconds
       setTimeout(() => {
         navigate('/dashboard');
-      }, 5000);
+      }, 3000);
     } catch (err: any) {
       setError("Payment failed. Please try again.");
       setLoading(false);
