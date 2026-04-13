@@ -101,7 +101,10 @@ export default function Checkout() {
           body: JSON.stringify({
             email: user.email,
             name: profile?.name,
-            items: items,
+            items: items.map(item => {
+              const { previewImages, ...rest } = item;
+              return rest;
+            }),
             total: total
           }),
         });

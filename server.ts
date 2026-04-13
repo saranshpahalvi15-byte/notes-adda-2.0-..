@@ -11,7 +11,8 @@ async function startServer() {
 
   // Enable CORS for all origins (allows Vercel frontend to talk to Render backend)
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Initialize Gemini AI
   const apiKey = process.env.CUSTOM_API_KEY || process.env.GEMINI_API_KEY || '';
