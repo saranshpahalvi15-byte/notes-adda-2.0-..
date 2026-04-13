@@ -40,7 +40,7 @@ async function startServer() {
       }
 
       if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-        return res.status(500).json({ error: "Please configure CUSTOM_API_KEY in settings" });
+        return res.status(500).json({ error: "API Key is missing. Please configure the CUSTOM_API_KEY or GEMINI_API_KEY environment variable." });
       }
 
       res.setHeader('Content-Type', 'text/event-stream');

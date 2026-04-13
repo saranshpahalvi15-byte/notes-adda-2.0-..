@@ -155,6 +155,9 @@ export default function NoteDetails() {
                 ))}
               </div>
             )}
+            <p className="text-sm font-bold text-red-600 italic mt-2 text-center max-w-[362.5px] mx-auto">
+              * Previews show limited pages. Full content is unlocked after purchase.
+            </p>
           </div>
 
           {/* Details */}

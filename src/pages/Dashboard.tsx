@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, doc, getDoc, documentId } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../store/useAuthStore';
-import { Download, Copy, CheckCircle, Package, Heart } from 'lucide-react';
+import { Download, Copy, CheckCircle, Package, Heart, Star } from 'lucide-react';
 import NoteCard from '../components/NoteCard';
 
 const getDirectDownloadUrl = (url: string) => {
@@ -207,16 +207,25 @@ export default function Dashboard() {
                   </div>
                   <div className="flex flex-col sm:items-end gap-2">
                     {item.type === 'note' ? (
-                      <a 
-                        href={getDirectDownloadUrl(item.pdfUrl)} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        download
-                        className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF
-                      </a>
+                      <div className="flex flex-col gap-2">
+                        <a 
+                          href={getDirectDownloadUrl(item.pdfUrl)} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          download
+                          className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download PDF
+                        </a>
+                        <button 
+                          onClick={() => navigate(`/notes/${item.id}`)}
+                          className="inline-flex items-center justify-center px-4 py-2 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Star className="h-4 w-4 mr-2 text-amber-500" />
+                          Rate & Review
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex flex-col gap-2">
                         {item.pdfUrl && (
@@ -231,15 +240,24 @@ export default function Dashboard() {
                             Download Bundle PDF
                           </a>
                         )}
-                        <button 
-                          onClick={() => navigate(`/bundles/${item.id}`)}
-                          className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          View Bundle Contents
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => navigate(`/bundles/${item.id}`)}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            View Contents
+                          </button>
+                          <button 
+                            onClick={() => navigate(`/bundles/${item.id}`)}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Star className="h-4 w-4 mr-2 text-amber-500" />
+                            Rate
+                          </button>
+                        </div>
                       </div>
                     )}
-                    <span className="text-xs text-gray-400">Order ID: {item.orderId.substring(0, 8)}...</span>
+                    <span className="text-xs text-gray-400 mt-1">Order ID: {item.orderId.substring(0, 8)}...</span>
                   </div>
                 </li>
               ))}

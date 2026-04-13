@@ -6,19 +6,14 @@ import { db } from '../firebase';
 import NoteCard from '../components/NoteCard';
 
 export default function Home() {
-  const [featuredNotes, setFeaturedNotes] = useState<any[]>([]);
-  const [featuredBundles, setFeaturedBundles] = useState<any[]>([]);
+  const [bestSellerBundles, setBestSellerBundles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFeatured = async () => {
+    const fetchBestSellers = async () => {
       try {
-        const notesQ = query(collection(db, 'notes'), where('isFeatured', '==', true), limit(4));
-        const bundlesQ = query(collection(db, 'bundles'), where('isFeatured', '==', true), limit(4));
-        
-        const [notesSnap, bundlesSnap] = await Promise.all([getDocs(notesQ), getDocs(bundlesQ)]);
-        
-        setFeaturedNotes(notesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const bundlesQ = query(collection(db, 'bundles'), limit(4));
+        const bundlesSnap = await getDocs(bundlesQ);
         
         const bundlesData = bundlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
         
@@ -41,15 +36,15 @@ export default function Home() {
           return bundle;
         });
 
-        setFeaturedBundles(enrichedBundles);
+        setBestSellerBundles(enrichedBundles);
       } catch (error) {
-        console.error("Error fetching featured items:", error);
+        console.error("Error fetching best sellers:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFeatured();
+    fetchBestSellers();
   }, []);
 
   return (
@@ -81,18 +76,18 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Section */}
-      {!loading && (featuredNotes.length > 0 || featuredBundles.length > 0) && (
+      {/* Best Sellers Section */}
+      {!loading && bestSellerBundles.length > 0 && (
         <section className="w-full py-12 mb-12">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold text-gray-900 flex items-center">
-              <Star className="h-8 w-8 text-amber-500 mr-3 fill-amber-500" />
-              Featured Notes & Bundles
+              <Award className="h-8 w-8 text-indigo-600 mr-3" />
+              Best Sellers
             </h2>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {featuredBundles.map(bundle => (
+            {bestSellerBundles.map(bundle => (
               <NoteCard
                 key={bundle.id}
                 id={bundle.id}
@@ -103,21 +98,6 @@ export default function Home() {
                 previewImage={bundle.previewImages?.[0] || ''}
                 type="bundle"
                 isFeatured={true}
-              />
-            ))}
-            {featuredNotes.map(note => (
-              <NoteCard
-                key={note.id}
-                id={note.id}
-                title={note.title}
-                subject={note.subject}
-                classLevel={note.classLevel}
-                price={note.price}
-                previewImage={note.previewImages?.[0]}
-                type="note"
-                isFeatured={true}
-                rating={note.rating}
-                reviewCount={note.reviewCount}
               />
             ))}
           </div>

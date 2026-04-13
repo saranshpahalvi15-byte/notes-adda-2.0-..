@@ -3,7 +3,7 @@ import { useNavigate, Routes, Route, Link, useLocation } from 'react-router-dom'
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../store/useAuthStore';
-import { Plus, Edit, Trash2, Image as ImageIcon, FileText, Package, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, FileText, Package, Tag, ShoppingBag } from 'lucide-react';
 
 function AdminNotes() {
   const [notes, setNotes] = useState<any[]>([]);
@@ -651,6 +651,128 @@ function AdminCoupons() {
   );
 }
 
+function AdminOrders() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [users, setUsers] = useState<Record<string, any>>({});
+  const [items, setItems] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      // Fetch orders
+      const ordersSnap = await getDocs(collection(db, 'orders'));
+      const ordersData = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Sort orders by date descending
+      ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      setOrders(ordersData);
+
+      // Fetch users to map userIds to emails/names
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const usersMap: Record<string, any> = {};
+      usersSnap.docs.forEach(doc => {
+        usersMap[doc.id] = doc.data();
+      });
+      setUsers(usersMap);
+
+      // Fetch notes and bundles to map itemIds to titles
+      const notesSnap = await getDocs(collection(db, 'notes'));
+      const bundlesSnap = await getDocs(collection(db, 'bundles'));
+      
+      const itemsMap: Record<string, any> = {};
+      notesSnap.docs.forEach(doc => {
+        itemsMap[doc.id] = { ...doc.data(), type: 'note' };
+      });
+      bundlesSnap.docs.forEach(doc => {
+        itemsMap[doc.id] = { ...doc.data(), type: 'bundle' };
+      });
+      setItems(itemsMap);
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Purchase History</h2>
+      </div>
+      
+      {error && (
+        <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-md text-sm">
+          {error}
+        </div>
+      )}
+      
+      {loading ? <p>Loading...</p> : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {orders.map(order => {
+                const user = users[order.userId];
+                return (
+                  <tr key={order.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{user?.name || 'Unknown User'}</div>
+                      <div className="text-sm text-gray-500">{user?.email || order.userId}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <ul className="text-sm text-gray-500 space-y-1">
+                        {order.items?.map((item: any, idx: number) => {
+                          const itemDetails = items[item.itemId];
+                          return (
+                            <li key={idx}>
+                              • {itemDetails?.title || 'Unknown Item'} <span className="text-xs text-gray-400">({item.type})</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      ₹{order.totalAmount}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {orders.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">No purchase history found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   const { profile } = useAuthStore();
   const navigate = useNavigate();
@@ -681,6 +803,9 @@ export default function Admin() {
             <Link to="/admin/coupons" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/coupons') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
               <Tag className="w-4 h-4 mr-2" /> Coupons
             </Link>
+            <Link to="/admin/orders" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/orders') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <ShoppingBag className="w-4 h-4 mr-2" /> Purchase History
+            </Link>
           </nav>
         </div>
       </div>
@@ -692,6 +817,7 @@ export default function Admin() {
           <Route path="bundles" element={<AdminBundles />} />
           <Route path="bundles/new-bundle" element={<AdminBundleForm />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="orders" element={<AdminOrders />} />
         </Routes>
       </div>
     </div>

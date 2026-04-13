@@ -1,19 +1,66 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, documentId } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, documentId, addDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuthStore } from '../store/useAuthStore';
-import { ShoppingCart, CheckCircle, Layers, Download } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Layers, Download, Star } from 'lucide-react';
 
 export default function BundleDetails() {
   const { id } = useParams<{ id: string }>();
   const [bundle, setBundle] = useState<any>(null);
   const [includedNotes, setIncludedNotes] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [hasPurchased, setHasPurchased] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
+
+  // Review form state
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const submitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !profile || !id) return;
+
+    try {
+      setSubmittingReview(true);
+      const reviewData = {
+        bundleId: id,
+        userId: user.uid,
+        userName: profile.name,
+        rating,
+        comment,
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, 'reviews'), reviewData);
+
+      // Update bundle rating
+      const newReviewCount = (bundle.reviewCount || 0) + 1;
+      const currentTotalRating = (bundle.rating || 0) * (bundle.reviewCount || 0);
+      const newRating = (currentTotalRating + rating) / newReviewCount;
+
+      await updateDoc(doc(db, 'bundles', id), {
+        rating: newRating,
+        reviewCount: newReviewCount
+      });
+
+      // Refresh data locally
+      setReviews([...reviews, reviewData]);
+      setBundle({ ...bundle, rating: newRating, reviewCount: newReviewCount });
+      setComment('');
+      setRating(5);
+      alert("Review submitted successfully!");
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      alert("Failed to submit review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   useEffect(() => {
     const fetchBundleAndNotes = async () => {
@@ -50,6 +97,11 @@ export default function BundleDetails() {
             setIncludedNotes(matchingNotes);
           }
         }
+
+        // Fetch reviews
+        const reviewsQ = query(collection(db, 'reviews'), where('bundleId', '==', id));
+        const reviewsSnap = await getDocs(reviewsQ);
+        setReviews(reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
         // Check if user has purchased
         if (user) {
@@ -159,6 +211,9 @@ export default function BundleDetails() {
               ))}
             </div>
           )}
+          <p className="text-sm font-bold text-red-600 italic mt-2 text-center max-w-[362.5px] mx-auto">
+            * Previews show limited pages. Full content is unlocked after purchase.
+          </p>
         </div>
 
         {/* Details */}
@@ -230,6 +285,74 @@ export default function BundleDetails() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mt-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center">
+          <Star className="h-6 w-6 text-amber-500 mr-2 fill-amber-500" />
+          Student Reviews
+        </h2>
+
+        {hasPurchased && (
+          <form onSubmit={submitReview} className="mb-10 bg-gray-50 p-6 rounded-2xl border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Write a Review</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="focus:outline-none"
+                  >
+                    <Star className={`h-8 w-8 ${star <= rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Comment</label>
+              <textarea
+                required
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Share your experience with this bundle..."
+              ></textarea>
+            </div>
+            <button
+              type="submit"
+              disabled={submittingReview}
+              className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {submittingReview ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </form>
+        )}
+
+        {reviews.length > 0 ? (
+          <div className="space-y-6">
+            {reviews.map((review) => (
+              <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-gray-900">{review.userName}</span>
+                  <span className="text-sm text-gray-500">{new Date(review.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className={`h-4 w-4 ${star <= review.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                  ))}
+                </div>
+                <p className="text-gray-700">{review.comment}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to review!</p>
+        )}
       </div>
     </div>
   );
