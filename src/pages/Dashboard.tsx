@@ -149,7 +149,12 @@ export default function Dashboard() {
 
         {/* Referral Card */}
         <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-md">
-          <h3 className="text-lg font-semibold mb-2 opacity-90">Your Referral Code</h3>
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-lg font-semibold opacity-90">Your Referral Code</h3>
+            <div className="bg-white/20 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm">
+              {profile?.referralsCount || 0} {(profile?.referralsCount || 0) === 1 ? 'Person' : 'Persons'} Referred
+            </div>
+          </div>
           <div className="flex items-center justify-between bg-white/20 rounded-lg p-3 backdrop-blur-sm">
             <span className="text-2xl font-mono font-bold tracking-wider">{profile?.referralCode}</span>
             <button 

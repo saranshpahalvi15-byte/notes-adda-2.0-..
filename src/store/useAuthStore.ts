@@ -9,6 +9,7 @@ interface UserProfile {
   role: 'user' | 'admin';
   classLevel?: string;
   referralCode: string;
+  referralsCount?: number;
   referredBy?: string;
   wishlist?: string[];
   downloadCredits?: number;

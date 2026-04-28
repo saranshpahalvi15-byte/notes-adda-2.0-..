@@ -105,6 +105,18 @@ export default function Checkout() {
 
       await addDoc(collection(db, 'orders'), orderData);
       
+      // Increment referralsCount for the referrer if referral discount was applied
+      if (appliedDiscount?.type === 'referral') {
+        const userQuery = query(collection(db, 'users'), where('referralCode', '==', appliedDiscount.code));
+        const userSnapshot = await getDocs(userQuery);
+        if (!userSnapshot.empty) {
+          const referrerDoc = userSnapshot.docs[0];
+          await updateDoc(doc(db, 'users', referrerDoc.id), {
+            referralsCount: (referrerDoc.data().referralsCount || 0) + 1
+          });
+        }
+      }
+      
       setSuccess(true);
       
       // Redirect to dashboard after 3 seconds
