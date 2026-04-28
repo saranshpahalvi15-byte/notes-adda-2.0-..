@@ -10,6 +10,9 @@ export default function BundleDetails() {
   const { id } = useParams<{ id: string }>();
   const [bundle, setBundle] = useState<any>(null);
   const [includedNotes, setIncludedNotes] = useState<any[]>([]);
+  const [includedMindMaps, setIncludedMindMaps] = useState<any[]>([]);
+  const [includedAudioNotes, setIncludedAudioNotes] = useState<any[]>([]);
+  const [includedMockTests, setIncludedMockTests] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
@@ -92,8 +95,9 @@ export default function BundleDetails() {
           const notesQuery = query(collection(db, 'notes'), where('__name__', 'in', bundleData.noteIds));
           const notesSnapshot = await getDocs(notesQuery);
           setIncludedNotes(notesSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        } else {
-          // If no specific notes selected, fetch all notes for this class and subject
+        } else if (!bundleData.mindMapIds && !bundleData.audioNoteIds && !bundleData.mockTestIds) {
+          // Legacy behavior: If no specific notes selected and no other item type arrays exist, 
+          // fetch all notes for this class and subject
           const notesQuery = query(
             collection(db, 'notes'), 
             where('classLevel', '==', bundleData.classLevel),
@@ -133,6 +137,25 @@ export default function BundleDetails() {
           });
           
           setIncludedNotes(matchingNotes);
+        }
+
+        // Fetch other included items if their IDs exist
+        if (bundleData.mindMapIds && bundleData.mindMapIds.length > 0) {
+          const mindMapsQuery = query(collection(db, 'mindMaps'), where('__name__', 'in', bundleData.mindMapIds));
+          const mindMapsSnapshot = await getDocs(mindMapsQuery);
+          setIncludedMindMaps(mindMapsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        }
+
+        if (bundleData.audioNoteIds && bundleData.audioNoteIds.length > 0) {
+          const audioNotesQuery = query(collection(db, 'audioNotes'), where('__name__', 'in', bundleData.audioNoteIds));
+          const audioNotesSnapshot = await getDocs(audioNotesQuery);
+          setIncludedAudioNotes(audioNotesSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        }
+
+        if (bundleData.mockTestIds && bundleData.mockTestIds.length > 0) {
+          const mockTestsQuery = query(collection(db, 'mockTests'), where('__name__', 'in', bundleData.mockTestIds));
+          const mockTestsSnapshot = await getDocs(mockTestsQuery);
+          setIncludedMockTests(mockTestsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
         }
 
         // Fetch reviews
@@ -275,12 +298,34 @@ export default function BundleDetails() {
           </div>
           
           <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Included Chapters ({includedNotes.length}):</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Included Items ({includedNotes.length + includedMindMaps.length + includedAudioNotes.length + includedMockTests.length}):</h3>
             <ul className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
               {includedNotes.map(note => (
-                <li key={note.id} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                <li key={`note-${note.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <span className="font-medium text-indigo-700 w-24 flex-shrink-0">Note:</span>
                   <span className="font-medium">{note.title}</span>
+                </li>
+              ))}
+              {includedMindMaps.map(item => (
+                <li key={`mindmap-${item.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <span className="font-medium text-pink-600 w-24 flex-shrink-0">Mind Map:</span>
+                  <span className="font-medium">{item.title}</span>
+                </li>
+              ))}
+              {includedAudioNotes.map(item => (
+                <li key={`audio-${item.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <span className="font-medium text-amber-600 w-24 flex-shrink-0">Audio Note:</span>
+                  <span className="font-medium">{item.title}</span>
+                </li>
+              ))}
+              {includedMockTests.map(item => (
+                <li key={`mocktest-${item.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                  <span className="font-medium text-purple-600 w-24 flex-shrink-0">Mock Test:</span>
+                  <span className="font-medium">{item.title}</span>
                 </li>
               ))}
             </ul>

@@ -670,14 +670,21 @@ function AdminBundleForm() {
   const { id } = useParams<{id: string}>();
   const navigate = useNavigate();
   const [notes, setNotes] = useState<any[]>([]);
+  const [mindMaps, setMindMaps] = useState<any[]>([]);
+  const [audioNotes, setAudioNotes] = useState<any[]>([]);
+  const [mockTests, setMockTests] = useState<any[]>([]);
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     classLevel: '9',
     subject: 'Science',
-    price: 249,
+    price: 39,
     discountPercent: '' as number | string,
     noteIds: [] as string[],
+    mindMapIds: [] as string[],
+    audioNoteIds: [] as string[],
+    mockTestIds: [] as string[],
     pdfUrl: '',
     isFeatured: false
   });
@@ -696,9 +703,12 @@ function AdminBundleForm() {
             description: data.description || '',
             classLevel: data.classLevel || '9',
             subject: data.subject || '',
-            price: data.price || 0,
+            price: data.price || 39,
             discountPercent: data.discountPercent !== undefined ? data.discountPercent : '',
             noteIds: data.noteIds || [],
+            mindMapIds: data.mindMapIds || [],
+            audioNoteIds: data.audioNoteIds || [],
+            mockTestIds: data.mockTestIds || [],
             pdfUrl: data.pdfUrl || '',
             isFeatured: data.isFeatured || false
           });
@@ -709,23 +719,37 @@ function AdminBundleForm() {
   }, [id]);
 
   useEffect(() => {
-    const fetchNotes = async () => {
+    const fetchItems = async () => {
       try {
-        const q = query(collection(db, 'notes'));
-        const snapshot = await getDocs(q);
-        setNotes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const [notesSnap, mindMapsSnap, audioNotesSnap, mockTestsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'notes'))),
+          getDocs(query(collection(db, 'mindMaps'))),
+          getDocs(query(collection(db, 'audioNotes'))),
+          getDocs(query(collection(db, 'mockTests')))
+        ]);
+        
+        setNotes(notesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setMindMaps(mindMapsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setAudioNotes(audioNotesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setMockTests(mockTestsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (err: any) {
         setError(err.message);
       }
     };
-    fetchNotes();
+    fetchItems();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.noteIds.length === 0 && !formData.pdfUrl.trim()) {
-      setError('Please either provide a Combined Bundle PDF URL or select at least one note.');
+    if (
+      formData.noteIds.length === 0 && 
+      formData.mindMapIds.length === 0 && 
+      formData.audioNoteIds.length === 0 && 
+      formData.mockTestIds.length === 0 && 
+      !formData.pdfUrl.trim()
+    ) {
+      setError('Please either provide a Combined Bundle PDF URL or select at least one item (Note, Mind Map, Audio Note, Mock Test).');
       return;
     }
 
@@ -764,13 +788,42 @@ function AdminBundleForm() {
     }
   };
 
-  const toggleNote = (id: string) => {
+  const toggleItem = (type: 'noteIds' | 'mindMapIds' | 'audioNoteIds' | 'mockTestIds', id: string) => {
     setFormData(prev => ({
       ...prev,
-      noteIds: prev.noteIds.includes(id) 
-        ? prev.noteIds.filter(nId => nId !== id)
-        : [...prev.noteIds, id]
+      [type]: prev[type].includes(id) 
+        ? prev[type].filter(iId => iId !== id)
+        : [...prev[type], id]
     }));
+  };
+
+  const renderSection = (title: string, items: any[], type: 'noteIds' | 'mindMapIds' | 'audioNoteIds' | 'mockTestIds') => {
+    let filtered = items.filter(i => i.classLevel === formData.classLevel);
+    if (type !== 'audioNoteIds') {
+      filtered = filtered.filter(i => (i.subject || '').toLowerCase() === (formData.subject || '').toLowerCase());
+    }
+    
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Select {title}</label>
+        <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2">
+          {filtered.map(item => (
+            <label key={item.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={formData[type].includes(item.id)}
+                onChange={() => toggleItem(type, item.id)}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <span className="ml-3 text-sm text-gray-900">{item.title} (₹{item.price})</span>
+            </label>
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-sm text-gray-500 p-2">No items found for this class{type !== 'audioNoteIds' ? ' and subject' : ''}.</p>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -825,7 +878,7 @@ function AdminBundleForm() {
 
         <div className="pt-4 border-t border-gray-200">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Bundle Contents</h3>
-          <p className="text-sm text-gray-500 mb-4">You can either provide a single combined PDF link for the entire bundle, select individual notes to include, or do both.</p>
+          <p className="text-sm text-gray-500 mb-4">You can provide a single combined PDF link for the entire bundle, and/or select included items below.</p>
           
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700">Combined Bundle PDF URL (Optional)</label>
@@ -839,24 +892,11 @@ function AdminBundleForm() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Individual Notes (Optional if PDF URL is provided)</label>
-            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2">
-            {notes.filter(n => n.classLevel === formData.classLevel && n.subject.toLowerCase() === formData.subject.toLowerCase()).map(note => (
-              <label key={note.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={formData.noteIds.includes(note.id)}
-                  onChange={() => toggleNote(note.id)}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <span className="ml-3 text-sm text-gray-900">{note.title} (₹{note.price})</span>
-              </label>
-            ))}
-            {notes.filter(n => n.classLevel === formData.classLevel && n.subject.toLowerCase() === formData.subject.toLowerCase()).length === 0 && (
-              <p className="text-sm text-gray-500 p-2">No notes found for this class and subject.</p>
-            )}
-            </div>
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            {renderSection('Notes', notes, 'noteIds')}
+            {renderSection('Mind Maps', mindMaps, 'mindMapIds')}
+            {renderSection('Audio Notes', audioNotes, 'audioNoteIds')}
+            {renderSection('Mock Tests', mockTests, 'mockTestIds')}
           </div>
         </div>
 
