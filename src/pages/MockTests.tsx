@@ -34,7 +34,15 @@ export default function MockTests() {
     return true;
   });
 
-  const subjects = ['Science', 'Math', 'Physics', 'Chemistry', 'Biology'];
+  const getSubjectsByClass = (classLevel?: string) => {
+    if (classLevel === '9' || classLevel === '10') {
+      return ['Science', 'Math', 'Social Science', 'English'];
+    } else if (classLevel === '11' || classLevel === '12' || classLevel === 'jee' || classLevel === 'neet') {
+      return ['Physics', 'Chemistry', 'Biology', 'Math', 'English'];
+    }
+    return ['Science', 'Math', 'Physics', 'Chemistry', 'Biology'];
+  };
+  const subjects = getSubjectsByClass(profile?.classLevel);
 
   return (
     <div className="space-y-8">

@@ -78,7 +78,7 @@ export default function MockTestGenerator() {
         reader.onerror = (error) => reject(error);
       });
 
-      const prompt = `You are an expert NCERT Indian curriculum exam creator. 
+      const prompt = `You are an expert Indian curriculum exam creator. 
 Based on the provided PDF chapter, generate a comprehensive Mock Test followed by detailed Solutions.
 The output MUST be structured as follows:
 # CHAPTER_MOCK_TEST
@@ -227,7 +227,7 @@ Format the output clearly in Markdown. Ensure the questions are accurate and dir
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Mock Test Generator</h1>
         <p className="text-gray-600 mb-8">
-          Upload an NCERT chapter PDF, and our AI will generate a complete exam-style mock test 
+          Upload a chapter PDF, and our AI will generate a complete exam-style mock test 
           with MCQs, Short/Long Answers, and Case Studies, plus the full solutions.
         </p>
 

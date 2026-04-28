@@ -26,7 +26,6 @@ import Privacy from './pages/Privacy';
 import Refund from './pages/Refund';
 import AudioNotes from './pages/AudioNotes';
 import MockTestGenerator from './pages/MockTestGenerator';
-import NcertCorner from './pages/NcertCorner';
 
 export default function App() {
   const { setUser, setProfile, setLoading } = useAuthStore();
@@ -104,7 +103,6 @@ export default function App() {
           <Route path="terms" element={<Terms />} />
           <Route path="privacy" element={<Privacy />} />
           <Route path="refund" element={<Refund />} />
-          <Route path="ncert-corner" element={<NcertCorner />} />
           <Route path="admin/*" element={<Admin />} />
         </Route>
       </Routes>

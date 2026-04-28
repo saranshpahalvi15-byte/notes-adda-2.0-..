@@ -77,9 +77,6 @@ export default function Layout() {
               <Link to="/mockTests" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
                 Mock Tests
               </Link>
-              <Link to="/ncert-corner" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors border border-indigo-100 bg-indigo-50/50">
-                NCERT Corner
-              </Link>
             </nav>
 
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -172,13 +169,6 @@ export default function Layout() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Mock Tests
-            </Link>
-            <Link 
-              to="/ncert-corner" 
-              className="block px-3 py-2 rounded-md text-base font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              NCERT Corner
             </Link>
           </div>
         )}
