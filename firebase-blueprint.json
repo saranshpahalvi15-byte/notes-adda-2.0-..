@@ -5,16 +5,19 @@
       "description": "A user of the platform (student or admin)",
       "type": "object",
       "properties": {
-        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "id": { "type": "string", "description": "Supabase User ID" },
         "email": { "type": "string", "format": "email" },
         "name": { "type": "string" },
         "role": { "type": "string", "enum": ["user", "admin"] },
         "referralCode": { "type": "string" },
         "referredBy": { "type": "string" },
         "wishlist": { "type": "array", "items": { "type": "string" } },
+        "downloadCredits": { "type": "number", "description": "Number of remaining download credits for subscribers" },
+        "creditsResetDate": { "type": "string", "format": "date-time", "description": "Date when download credits reset" },
+        "downloadedNotes": { "type": "array", "items": { "type": "string" }, "description": "List of note IDs downloaded using credits" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email", "name", "role", "referralCode"]
+      "required": ["id", "email", "name", "role", "referralCode"]
     },
     "Note": {
       "title": "Note",
@@ -48,7 +51,11 @@
         "subject": { "type": "string" },
         "price": { "type": "number" },
         "noteIds": { "type": "array", "items": { "type": "string" } },
+        "pdfUrl": { "type": "string" },
+        "previewImages": { "type": "array", "items": { "type": "string" } },
         "isFeatured": { "type": "boolean" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "description", "classLevel", "subject", "price", "noteIds"]

@@ -5,46 +5,83 @@
 
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from './store/useAuthStore';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Notes from './pages/Notes';
 import Bundles from './pages/Bundles';
+import MindMaps from './pages/MindMaps';
+import MockTests from './pages/MockTests';
 import NoteDetails from './pages/NoteDetails';
 import BundleDetails from './pages/BundleDetails';
 import Checkout from './pages/Checkout';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Refund from './pages/Refund';
+import AudioNotes from './pages/AudioNotes';
+import MockTestGenerator from './pages/MockTestGenerator';
+import NcertCorner from './pages/NcertCorner';
 
 export default function App() {
   const { setUser, setProfile, setLoading } = useAuthStore();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          if (userDoc.exists()) {
-            setProfile(userDoc.data() as any);
-          } else {
+    let unsubscribeProfile: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      const currentProfile = useAuthStore.getState().profile;
+      if (currentProfile?.id === 'admin-hardcoded-id') {
+        setLoading(false);
+        return;
+      }
+
+      setUser(firebaseUser as any);
+      
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = undefined;
+      }
+
+      if (firebaseUser) {
+        unsubscribeProfile = onSnapshot(
+          doc(db, 'users', firebaseUser.uid),
+          (userDoc) => {
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              if ((firebaseUser.email === 'masteradmin@vidyanotes.com' || firebaseUser.email === 'saransh1860@gmail.com') && data.role !== 'admin') {
+                updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
+                data.role = 'admin';
+              }
+              setProfile({ id: userDoc.id, ...data } as any);
+            } else {
+              setProfile(null);
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Error fetching user profile snapshot", error);
             setProfile(null);
+            setLoading(false);
           }
-        } catch (error) {
-          console.error("Error fetching user profile", error);
-          setProfile(null);
-        }
+        );
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+      }
+    };
   }, [setUser, setProfile, setLoading]);
 
   return (
@@ -57,8 +94,17 @@ export default function App() {
           <Route path="notes/:id" element={<NoteDetails />} />
           <Route path="bundles" element={<Bundles />} />
           <Route path="bundles/:id" element={<BundleDetails />} />
+          <Route path="mindMaps" element={<MindMaps />} />
+          <Route path="mindMaps/:id" element={<NoteDetails />} />
+          <Route path="mockTests" element={<MockTests />} />
+          <Route path="mockTests/:id" element={<NoteDetails />} />
+          <Route path="audioNotes" element={<AudioNotes />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="terms" element={<Terms />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="refund" element={<Refund />} />
+          <Route path="ncert-corner" element={<NcertCorner />} />
           <Route path="admin/*" element={<Admin />} />
         </Route>
       </Routes>

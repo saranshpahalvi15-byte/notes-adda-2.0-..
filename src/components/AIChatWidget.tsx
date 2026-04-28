@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 export default function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string }[]>([
-    { role: 'model', text: 'Hi! I am the new, upgraded **Notes Adda AI Tutor**. I am powered by an advanced reasoning model to help you with complex academic concepts, exam prep, and platform navigation. How can I help you excel today?' }
+    { role: 'model', text: 'Hi! I am the new, upgraded **Notes Adda AI**. I am powered by an advanced reasoning model to help you with complex academic concepts, exam prep, and platform navigation. How can I help you excel today?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function AIChatWidget() {
 
   const clearChat = () => {
     setMessages([
-      { role: 'model', text: 'Hi! I am the new, upgraded **Notes Adda AI Tutor**. I am powered by an advanced reasoning model to help you with complex academic concepts, exam prep, and platform navigation. How can I help you excel today?' }
+      { role: 'model', text: 'Hi! I am the new, upgraded **Notes Adda AI**. I am powered by an advanced reasoning model to help you with complex academic concepts, exam prep, and platform navigation. How can I help you excel today?' }
     ]);
   };
 
@@ -155,8 +155,7 @@ export default function AIChatWidget() {
               <Sparkles className="w-5 h-5 text-indigo-100" />
             </div>
             <div>
-              <h3 className="font-bold text-lg leading-tight">AI Tutor Pro</h3>
-              <p className="text-xs text-indigo-200 font-medium">Powered by Gemini 2.5 Pro</p>
+              <h3 className="font-bold text-lg leading-tight">Notes Adda AI</h3>
             </div>
           </div>
           <div className="flex items-center space-x-1">

@@ -60,6 +60,7 @@ Your capabilities:
 - You format your responses beautifully using Markdown (bolding key terms, using bullet points, and providing code blocks or math formulas where appropriate).
 - You are encouraging, patient, and adapt to the student's level of understanding.
 - You help students navigate the Notes Adda platform and recommend studying strategies.
+- ***NEW FEATURE***: You should inform students about "Mock Tests" which they can purchase. Once purchased, they can upload their answer sheets for "Expert Evaluation", where our experts will evaluate their step-by-step methods and assign marks exactly like a human teacher using the official solution keys!
 - If asked a question outside of academics or the platform, politely guide the conversation back to their studies.
 Always strive to be the most helpful, insightful, and powerful tutor they have ever interacted with.`;
 
@@ -91,6 +92,56 @@ Always strive to be the most helpful, insightful, and powerful tutor they have e
     }
   });
 
+  app.post("/api/evaluate-mock-test", async (req, res) => {
+    try {
+      const { userAnswersBase64, solutionBase64, userMimeType, solutionMimeType, maxMarks } = req.body;
+      
+      if (!userAnswersBase64 || !solutionBase64) {
+        return res.status(400).json({ error: "Missing required files (user answers or solution)" });
+      }
+
+      if (!apiKey) {
+        return res.status(500).json({ error: "API Key is missing." });
+      }
+
+      const systemInstruction = `You are an expert, meticulous human evaluator for academic tests.
+You are given two documents:
+1. The student's written answers.
+2. The official answer key/solution provided by the examiner.
+
+Your task:
+- Carefully compare the student's answers against the official solution.
+- Evaluate step-by-step just like a human teacher would.
+- Assign marks for each question based on accuracy, methodology, and correctness according to the provided solution.
+- Output a detailed evaluation report.
+- Clearly state the Total Marks obtained out of ${maxMarks || 100} at the end.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-pro', // use a pro model for better reasoning and pdf handling
+        contents: [
+          {
+            role: 'user',
+            parts: [
+               { inlineData: { mimeType: solutionMimeType || 'application/pdf', data: solutionBase64 } },
+               { text: "Here is the OFFICIAL SOLUTION. Please use this as the absolute truth for grading." },
+               { inlineData: { mimeType: userMimeType || 'application/pdf', data: userAnswersBase64 } },
+               { text: `Here are the STUDENT'S ANSWERS. Please evaluate them against the official solution and assign marks.` }
+            ]
+          }
+        ],
+        config: {
+          systemInstruction,
+          temperature: 0.2,
+        }
+      });
+
+      res.json({ evaluation: response.text });
+    } catch (error: any) {
+      console.error('Error in mock test evaluation:', error);
+      res.status(500).json({ error: "Failed to evaluate mock test", details: error.message });
+    }
+  });
+
   app.post("/api/send-receipt", async (req, res) => {
     try {
       const { email, name, items, total } = req.body;
@@ -108,12 +159,11 @@ Always strive to be the most helpful, insightful, and powerful tutor they have e
           host: 'smtp.gmail.com',
           port: 465,
           secure: true, // use SSL
-          family: 4, // Force IPv4 to fix ENETUNREACH on Render
           auth: {
             user: 'saransh1860@gmail.com',
             pass: process.env.SMTP_PASS,
           },
-        });
+        } as any);
       } else {
         // Use Ethereal for testing
         const testAccount = await nodemailer.createTestAccount();

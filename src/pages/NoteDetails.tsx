@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, updateDoc } from 'firebase/firestore';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../firebase';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { ShoppingCart, CheckCircle, Star } from 'lucide-react';
+import { forceDownload } from '../lib/downloadUtils';
+import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic } from 'lucide-react';
 
 export default function NoteDetails() {
   const { id } = useParams<{ id: string }>();
@@ -11,43 +12,82 @@ export default function NoteDetails() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [isReading, setIsReading] = useState(false);
   const navigate = useNavigate();
-  const { user, profile } = useAuthStore();
+  const location = useLocation();
+  const { user, profile, setProfile } = useAuthStore();
+  
+  const isMindMap = location.pathname.includes('/mindMaps/');
+  const isMockTest = location.pathname.includes('/mockTests/');
+  const collectionName = isMindMap ? 'mindMaps' : isMockTest ? 'mockTests' : 'notes';
 
   // Review form state
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  
+  const [originalPrice, setOriginalPrice] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(0);
+
+  useEffect(() => {
+    if (note && note.price) {
+      const getConsistentRandom = (str: string) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash);
+      };
+      const discount = note.discountPercent !== undefined && note.discountPercent !== null ? note.discountPercent : (20 + (getConsistentRandom(note.id || id || '') % 31));
+      setDiscountPercent(discount);
+      setOriginalPrice(Math.round((note.price * 100) / (100 - discount)));
+    }
+  }, [note, id]);
 
   useEffect(() => {
     const fetchNoteAndReviews = async () => {
       if (!id) return;
       try {
-        const docRef = doc(db, 'notes', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setNote({ id: docSnap.id, ...docSnap.data() });
-        }
+        const noteDoc = await getDoc(doc(db, collectionName, id));
+        if (!noteDoc.exists()) throw new Error("Item not found");
+        const noteData = { id: noteDoc.id, ...noteDoc.data() } as any;
+        setNote(noteData);
 
         // Fetch reviews
-        const reviewsQ = query(collection(db, 'reviews'), where('noteId', '==', id));
-        const reviewsSnap = await getDocs(reviewsQ);
-        setReviews(reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const reviewsQuery = query(collection(db, 'reviews'), where('noteId', '==', id));
+        const reviewsSnapshot = await getDocs(reviewsQuery);
+        setReviews(reviewsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
 
         // Check if user has purchased
         if (user) {
-          const ordersQ = query(
-            collection(db, 'orders'), 
-            where('userId', '==', user.uid),
-            where('status', '==', 'completed')
-          );
-          const ordersSnap = await getDocs(ordersQ);
-          const hasBought = ordersSnap.docs.some(doc => {
-            const data = doc.data();
-            return data.items && data.items.some((item: any) => item.itemId === id);
-          });
-          setHasPurchased(hasBought);
+          try {
+            const ordersQuery = query(
+              collection(db, 'orders'),
+              where('userId', '==', user.uid),
+              where('status', '==', 'completed')
+            );
+            const ordersSnapshot = await getDocs(ordersQuery);
+            const ordersData = ordersSnapshot.docs.map(d => d.data());
+            
+            let boughtDirectly = false;
+
+            ordersData.forEach((order: any) => {
+              if (order.items) {
+                order.items.forEach((item: any) => {
+                  if (item.itemId === id) {
+                    boughtDirectly = true;
+                  }
+                });
+              }
+            });
+
+            setHasPurchased(boughtDirectly);
+          } catch (e: any) {
+            console.error('Error fetching orders:', e);
+            throw e;
+          }
         }
 
       } catch (error) {
@@ -65,7 +105,16 @@ export default function NoteDetails() {
       navigate('/login');
       return;
     }
-    navigate('/checkout', { state: { items: [{ ...note, type: 'note' }] } });
+    navigate('/checkout', { state: { items: [{ ...note, type: isMindMap ? 'mindMap' : isMockTest ? 'mockTest' : 'note' }] } });
+  };
+
+  const handleDownload = async () => {
+    if (!user || !profile || !id) return;
+
+    if (hasPurchased) {
+      forceDownload(note.pdfUrl, `${note.title || 'Note'}.pdf`);
+      return;
+    }
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -83,20 +132,20 @@ export default function NoteDetails() {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'reviews'), reviewData);
+      const docRef = await addDoc(collection(db, 'reviews'), reviewData);
 
       // Update note rating
       const newReviewCount = (note.reviewCount || 0) + 1;
       const currentTotalRating = (note.rating || 0) * (note.reviewCount || 0);
       const newRating = (currentTotalRating + rating) / newReviewCount;
 
-      await updateDoc(doc(db, 'notes', id), {
+      await updateDoc(doc(db, collectionName, id), {
         rating: newRating,
         reviewCount: newReviewCount
       });
 
       // Refresh data locally
-      setReviews([...reviews, reviewData]);
+      setReviews([...reviews, { id: docRef.id, ...reviewData }]);
       setNote({ ...note, rating: newRating, reviewCount: newReviewCount });
       setComment('');
       setRating(5);
@@ -107,6 +156,17 @@ export default function NoteDetails() {
     } finally {
       setSubmittingReview(false);
     }
+  };
+
+  const getDrivePreviewUrl = (url: string) => {
+    if (!url) return '';
+    try {
+      const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview?rm=minimal`;
+      }
+    } catch (e) {}
+    return url;
   };
 
   if (loading) {
@@ -155,9 +215,15 @@ export default function NoteDetails() {
                 ))}
               </div>
             )}
-            <p className="text-sm font-bold text-red-600 italic mt-2 text-center max-w-[362.5px] mx-auto">
-              * Previews show limited pages. Full content is unlocked after purchase.
-            </p>
+            {isMindMap ? (
+              <p className="text-sm font-bold text-red-600 italic mt-2 text-center max-w-[362.5px] mx-auto">
+                * Preview shows a compressed version. High-quality PDF is unlocked after purchase.
+              </p>
+            ) : (
+              <p className="text-sm font-bold text-red-600 italic mt-2 text-center max-w-[362.5px] mx-auto">
+                * Previews show limited pages. Full content is unlocked after purchase.
+              </p>
+            )}
           </div>
 
           {/* Details */}
@@ -201,18 +267,46 @@ export default function NoteDetails() {
               </ul>
             </div>
 
-            <div className="flex items-center justify-between mt-auto pt-6 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-auto pt-6 border-t border-gray-100 gap-4">
               <div>
                 <p className="text-sm text-gray-500 font-medium mb-1">Price</p>
-                <p className="text-4xl font-extrabold text-gray-900">₹{note.price}</p>
+                <div className="flex items-end gap-3">
+                  <p className="text-4xl font-extrabold text-gray-900">₹{note.price}</p>
+                  {originalPrice > 0 && note.price > 0 && (
+                    <div className="flex flex-col pb-1">
+                      <span className="text-gray-400 line-through text-lg mt-0.5">₹{originalPrice}</span>
+                      <span className="text-green-600 font-semibold text-sm">{discountPercent}% OFF</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={handleBuy}
-                className="flex items-center justify-center px-8 py-4 border border-transparent text-lg font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all"
-              >
-                <ShoppingCart className="h-6 w-6 mr-2" />
-                Buy Now
-              </button>
+              {hasPurchased ? (
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => setIsReading(true)}
+                    className="flex items-center justify-center px-6 py-3 border border-transparent text-lg font-medium rounded-xl text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-all cursor-pointer"
+                  >
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    Read Notes
+                  </button>
+                  <button 
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="flex items-center justify-center px-6 py-3 border border-transparent text-lg font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    {downloading ? 'Processing...' : 'Download PDF'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleBuy}
+                  className="flex items-center justify-center px-8 py-4 border border-transparent text-lg font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <ShoppingCart className="h-6 w-6 mr-2" />
+                  Buy Now
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -285,6 +379,36 @@ export default function NoteDetails() {
           <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to review!</p>
         )}
       </div>
+
+      {/* PDF Reading Modal */}
+      {isReading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 sm:p-6">
+          <div className="bg-white rounded-2xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col overflow-hidden relative shadow-2xl">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-indigo-600" />
+                {note.title}
+              </h3>
+              <button 
+                onClick={() => setIsReading(false)} 
+                className="text-gray-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors flex items-center"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="flex-1 w-full h-full bg-gray-100 relative overflow-hidden">
+              {/* Shift iframe up by 56px to hide the Google Drive top toolbar which contains the pop-out button */}
+              <iframe 
+                src={getDrivePreviewUrl(note.pdfUrl)} 
+                className="absolute left-0 w-full border-0"
+                style={{ top: '-56px', height: 'calc(100% + 56px)' }}
+                allow="autoplay"
+                title="PDF Reader"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

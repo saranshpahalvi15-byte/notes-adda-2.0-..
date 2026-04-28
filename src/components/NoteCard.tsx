@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Star } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 interface NoteCardProps {
   id: string;
@@ -11,17 +11,30 @@ interface NoteCardProps {
   subject: string;
   classLevel: string;
   price: number;
+  discountPercent?: number;
   previewImage: string;
-  type: 'note' | 'bundle';
+  type: 'note' | 'bundle' | 'mindMap' | 'mockTest';
   isFeatured?: boolean;
   rating?: number;
   reviewCount?: number;
 }
 
-const NoteCard: React.FC<NoteCardProps> = ({ id, title, subject, classLevel, price, previewImage, type, isFeatured, rating, reviewCount }) => {
+const NoteCard: React.FC<NoteCardProps> = ({ id, title, subject, classLevel, price, discountPercent: itemDiscountPercent, previewImage, type, isFeatured, rating, reviewCount }) => {
   const { user, profile, setProfile } = useAuthStore();
   
   const isWishlisted = profile?.wishlist?.includes(id) || false;
+
+  const getConsistentRandom = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return Math.abs(hash);
+  };
+
+  const discountPercent = itemDiscountPercent !== undefined && itemDiscountPercent !== null ? itemDiscountPercent : (20 + (getConsistentRandom(id) % 31)); // 20% to 50%
+  const originalPrice = price > 0 ? Math.round((price * 100) / (100 - discountPercent)) : 0;
+
 
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -30,19 +43,18 @@ const NoteCard: React.FC<NoteCardProps> = ({ id, title, subject, classLevel, pri
       return;
     }
 
-    const userRef = doc(db, 'users', user.uid);
     try {
+      let newWishlist = profile.wishlist || [];
       if (isWishlisted) {
-        await updateDoc(userRef, {
-          wishlist: arrayRemove(id)
-        });
-        setProfile({ ...profile, wishlist: (profile.wishlist || []).filter(itemId => itemId !== id) });
+        newWishlist = newWishlist.filter((itemId: string) => itemId !== id);
       } else {
-        await updateDoc(userRef, {
-          wishlist: arrayUnion(id)
-        });
-        setProfile({ ...profile, wishlist: [...(profile.wishlist || []), id] });
+        newWishlist = [...newWishlist, id];
       }
+      
+      const userRef = doc(db, 'users', profile.id);
+      await updateDoc(userRef, { wishlist: newWishlist });
+      
+      setProfile({ ...profile, wishlist: newWishlist });
     } catch (error) {
       console.error("Error updating wishlist", error);
     }
@@ -84,7 +96,15 @@ const NoteCard: React.FC<NoteCardProps> = ({ id, title, subject, classLevel, pri
         </div>
         <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{title}</h3>
         <div className="mt-auto flex items-center justify-between pt-4">
-          <span className="text-xl font-extrabold text-gray-900">₹{price}</span>
+          <div className="flex flex-col">
+            <span className="text-xl font-extrabold text-gray-900">₹{price}</span>
+            {originalPrice > 0 && price > 0 && (
+              <div className="flex items-center text-xs mt-0.5">
+                <span className="text-gray-400 line-through mr-2">₹{originalPrice}</span>
+                <span className="text-green-600 font-semibold">{discountPercent}% OFF</span>
+              </div>
+            )}
+          </div>
           <Link
             to={`/${type}s/${id}`}
             className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"

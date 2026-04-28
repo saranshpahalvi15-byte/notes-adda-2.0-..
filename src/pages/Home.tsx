@@ -1,30 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Award, Zap, ArrowRight, Star } from 'lucide-react';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../firebase';
+import { collection, query, limit, getDocs } from 'firebase/firestore';
 import NoteCard from '../components/NoteCard';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function Home() {
+  const { profile } = useAuthStore();
   const [bestSellerBundles, setBestSellerBundles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchBestSellers = async () => {
       try {
-        const bundlesQ = query(collection(db, 'bundles'), limit(4));
-        const bundlesSnap = await getDocs(bundlesQ);
+        const bundlesQuery = query(collection(db, 'bundles'), limit(4));
+        const bundlesSnapshot = await getDocs(bundlesQuery);
+        const bundlesData = bundlesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        const bundlesData = bundlesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-        
-        // Backfill preview images for older bundles
-        const allNotesSnapshot = await getDocs(collection(db, 'notes'));
-        const allNotes = allNotesSnapshot.docs.map(d => d.data());
+        // Backfill preview images for older bundles from notes
+        const notesSnapshot = await getDocs(collection(db, 'notes'));
+        const allNotes = notesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
 
-        const enrichedBundles = bundlesData.map(bundle => {
+        let enrichedBundles = bundlesData.map((bundle: any) => {
           if (!bundle.previewImages || bundle.previewImages.length === 0) {
             const matchingNote = allNotes.find(n => 
               n.classLevel === bundle.classLevel && 
+              n.subject && bundle.subject && 
               n.subject.toLowerCase() === bundle.subject.toLowerCase() && 
               n.previewImages && 
               n.previewImages.length > 0
@@ -35,6 +37,10 @@ export default function Home() {
           }
           return bundle;
         });
+
+        if (profile?.classLevel) {
+          enrichedBundles = enrichedBundles.filter(bundle => bundle.classLevel === profile.classLevel);
+        }
 
         setBestSellerBundles(enrichedBundles);
       } catch (error) {
@@ -104,30 +110,48 @@ export default function Home() {
         </section>
       )}
 
-      {/* Features */}
+      {/* Categories */}
       <section className="w-full py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div className="p-3 bg-indigo-100 rounded-full mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          <Link to="/notes" className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-100 transition-all group">
+            <div className="p-3 bg-indigo-100 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
               <BookOpen className="h-8 w-8 text-indigo-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Chapter-wise Notes</h3>
-            <p className="text-gray-500">Get detailed notes for specific chapters at just ₹25 each. Buy only what you need.</p>
-          </div>
-          <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div className="p-3 bg-indigo-100 rounded-full mb-4">
+            <p className="text-gray-500 text-sm">Detailed notes for specific chapters.</p>
+          </Link>
+          
+          <Link to="/bundles" className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-100 transition-all group">
+            <div className="p-3 bg-indigo-100 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
               <Award className="h-8 w-8 text-indigo-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Full Subject Bundles</h3>
-            <p className="text-gray-500">Save money with complete subject bundles for ₹249. Everything you need in one place.</p>
-          </div>
-          <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div className="p-3 bg-indigo-100 rounded-full mb-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Subject Bundles</h3>
+            <p className="text-gray-500 text-sm">Save money with complete subject bundles.</p>
+          </Link>
+          
+          <Link to="/mindMaps" className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-100 transition-all group">
+            <div className="p-3 bg-indigo-100 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-indigo-600"><path d="M12 22c-5.52 0-10-4.48-10-10S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zM12 16v-4m0-4h.01"/></svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Mind Maps</h3>
+            <p className="text-gray-500 text-sm">Visual summaries for quick revision.</p>
+          </Link>
+
+          <Link to="/audioNotes" className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-100 transition-all group">
+            <div className="p-3 bg-indigo-100 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-indigo-600"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Audio Notes</h3>
+            <p className="text-gray-500 text-sm">Learn on the go with high-quality audio.</p>
+          </Link>
+          
+          <Link to="/mockTests" className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-100 transition-all group">
+            <div className="p-3 bg-indigo-100 rounded-full mb-4 group-hover:bg-indigo-200 transition-colors">
               <Zap className="h-8 w-8 text-indigo-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Instant Access</h3>
-            <p className="text-gray-500">Download your PDF notes instantly after secure payment. Study anytime, anywhere.</p>
-          </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Mock Tests</h3>
+            <p className="text-gray-500 text-sm">Test your knowledge with practice tests.</p>
+          </Link>
         </div>
       </section>
 

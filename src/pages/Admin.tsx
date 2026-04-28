@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { useNavigate, Routes, Route, Link, useLocation, useParams } from 'react-router-dom';
 import { db } from '../firebase';
+import { collection, query, orderBy, getDocs, deleteDoc, doc, addDoc, updateDoc, where, getDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Plus, Edit, Trash2, Image as ImageIcon, FileText, Package, Tag, ShoppingBag } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, FileText, Package, Tag, ShoppingBag, Scissors, Mic, BrainCircuit, FileSignature } from 'lucide-react';
+import AdminPDFSplitter from './AdminPDFSplitter';
+import { AdminMindMaps, AdminMindMapForm } from './AdminMindMaps';
+import { AdminMockTests, AdminMockTestForm } from './AdminMockTests';
+import MockTestGenerator from './MockTestGenerator';
 
 function AdminNotes() {
   const [notes, setNotes] = useState<any[]>([]);
@@ -16,7 +20,8 @@ function AdminNotes() {
 
   const fetchNotes = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'notes'));
+      const q = query(collection(db, 'notes'));
+      const snapshot = await getDocs(q);
       setNotes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (err: any) {
       setError(err.message);
@@ -26,8 +31,6 @@ function AdminNotes() {
   };
 
   const handleDelete = async (id: string) => {
-    // Using a simple state-based confirmation would be better, but for simplicity we'll just delete
-    // since window.confirm is blocked in iframes.
     try {
       await deleteDoc(doc(db, 'notes', id));
       fetchNotes();
@@ -73,7 +76,10 @@ function AdminNotes() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{note.price}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => handleDelete(note.id)} className="text-red-600 hover:text-red-900 ml-4">
+                    <Link to={`edit-note/${note.id}`} className="text-indigo-600 hover:text-indigo-900 inline-block mr-4">
+                      <Edit className="w-5 h-5" />
+                    </Link>
+                    <button onClick={() => handleDelete(note.id)} className="text-red-600 hover:text-red-900">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </td>
@@ -87,7 +93,258 @@ function AdminNotes() {
   );
 }
 
+function AdminAudioNotes() {
+  const [audioNotes, setAudioNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchAudioNotes();
+  }, []);
+
+  const fetchAudioNotes = async () => {
+    try {
+      const q = query(collection(db, 'audioNotes'));
+      const snapshot = await getDocs(q);
+      setAudioNotes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'audioNotes', id));
+      fetchAudioNotes();
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Manage Audio Notes</h2>
+        <Link to="new-audio-note" className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center">
+          <Plus className="w-4 h-4 mr-2" /> Add Audio Note
+        </Link>
+      </div>
+      
+      {error && <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-md text-sm">{error}</div>}
+      
+      {loading ? <p>Loading...</p> : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {audioNotes.map(note => (
+                <tr key={note.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{note.title}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Class {note.classLevel}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{note.price || 5}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <Link to={`/admin/audio-notes/edit-audio-note/${note.id}`} className="text-indigo-600 hover:text-indigo-900 inline-block mr-4">
+                      <Edit className="w-5 h-5" />
+                    </Link>
+                    <button onClick={() => handleDelete(note.id)} className="text-red-600 hover:text-red-900">
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminAudioNoteForm() {
+  const { id } = useParams<{id: string}>();
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({ title: '', classLevel: '9', audioUrl: '', noteId: '', price: 5, discountPercent: '' as number | string });
+  const [notes, setNotes] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      const fetchAudio = async () => {
+        const docRef = doc(db, 'audioNotes', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData({
+            title: data.title || '',
+            classLevel: data.classLevel || '9',
+            audioUrl: data.audioUrl || '',
+            noteId: data.noteId || '',
+            price: data.price !== undefined ? data.price : 5,
+            discountPercent: data.discountPercent !== undefined ? data.discountPercent : ''
+          });
+        }
+      };
+      fetchAudio();
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [formData.classLevel]);
+
+  const fetchNotes = async () => {
+    try {
+      const q = query(
+        collection(db, 'notes'),
+        where('classLevel', '==', formData.classLevel)
+      );
+      const snapshot = await getDocs(q);
+      const fetchedNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      
+      // Sort by subject then title
+      fetchedNotes.sort((a, b) => {
+        if (a.subject < b.subject) return -1;
+        if (a.subject > b.subject) return 1;
+        return a.title.localeCompare(b.title);
+      });
+      setNotes(fetchedNotes);
+    } catch (err) {
+      console.error("Error fetching notes:", err);
+    }
+  };
+
+  const filteredNotes = notes.filter(note => 
+    note.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    note.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.audioUrl && !audioFile) {
+      alert("Please provide an Audio URL or upload an audio file.");
+      return;
+    }
+    
+    if (audioFile && audioFile.size > 700 * 1024) {
+      alert(`Audio file is too large (${(audioFile.size / 1024 / 1024).toFixed(2)} MB). Please use a file smaller than ~700KB, or upload your audio to Google Drive and paste the link in the Audio URL field instead to avoid Firestore limits.`);
+      return;
+    }
+
+    try {
+      setUploading(true);
+      let finalAudioUrl = formData.audioUrl;
+      
+      if (audioFile) {
+        const reader = new FileReader();
+        finalAudioUrl = await new Promise((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(audioFile);
+        });
+      }
+
+      const audioNoteData: any = { 
+        title: formData.title,
+        classLevel: formData.classLevel,
+        audioUrl: finalAudioUrl,
+        noteId: formData.noteId === '' ? null : formData.noteId,
+        price: Number(formData.price)
+      };
+      
+      if (formData.discountPercent !== '') {
+        audioNoteData.discountPercent = Number(formData.discountPercent);
+      }
+      
+      if (!id) {
+        audioNoteData.createdAt = new Date().toISOString();
+        await addDoc(collection(db, 'audioNotes'), audioNoteData);
+      } else {
+        await updateDoc(doc(db, 'audioNotes', id), audioNoteData);
+      }
+      
+      navigate('/admin/audio-notes');
+    } catch (err: any) {
+      console.error("Error adding audio note:", err);
+      alert("Failed to add audio note: " + (err.message || "Unknown error"));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{id ? 'Edit Audio Note' : 'Add Audio Note'}</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Title</label>
+          <input type="text" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
+          <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Discount Percentage (%)</label>
+          <input type="number" min="0" max="100" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: e.target.value === '' ? '' : Number(e.target.value)})} placeholder="e.g. 20 (Optional)" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Class</label>
+          <select value={formData.classLevel} onChange={e => setFormData({...formData, classLevel: e.target.value, noteId: ''})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+            <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="jee">JEE</option><option value="neet">NEET</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Audio URL</label>
+          <input type="url" value={formData.audioUrl} onChange={e => setFormData({...formData, audioUrl: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Associate with Specific Note/Chapter (Optional)</label>
+          <div className="mt-1 space-y-2">
+            <input 
+              type="text" 
+              placeholder="Search by title or subject..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            />
+            <select 
+              value={formData.noteId} 
+              onChange={e => {
+                console.log("Selected noteId:", e.target.value);
+                setFormData({...formData, noteId: e.target.value});
+              }}
+              className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">General (All notes in this class)</option>
+              {filteredNotes.map(note => (
+                <option key={note.id} value={note.id}>[{note.subject}] {note.title}</option>
+              ))}
+            </select>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">If you select a specific note, the audio will only appear on that note's page.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Or Upload Audio File</label>
+          <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files ? e.target.files[0] : null)} className="mt-1 block w-full" />
+        </div>
+        <button type="submit" disabled={uploading} className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">{uploading ? 'Adding...' : 'Add Audio Note'}</button>
+      </form>
+    </div>
+  );
+}
+
 function AdminNoteForm() {
+  const { id } = useParams<{id: string}>();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: '',
@@ -95,12 +352,38 @@ function AdminNoteForm() {
     classLevel: '9',
     subject: 'Science',
     price: 25,
+    discountPercent: '' as number | string,
     isFeatured: false,
-    pdfUrl: ''
+    pdfUrl: '',
+    audioNoteUrl: ''
   });
   const [previewImageFiles, setPreviewImageFiles] = useState<(File | null)[]>([null, null, null, null]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (id) {
+      const fetchNote = async () => {
+        const docRef = doc(db, 'notes', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            classLevel: data.classLevel || '9',
+            subject: data.subject || '',
+            price: data.price || 0,
+            discountPercent: data.discountPercent !== undefined ? data.discountPercent : '',
+            isFeatured: data.isFeatured || false,
+            pdfUrl: data.pdfUrl || '',
+            audioNoteUrl: data.audioNoteUrl || ''
+          });
+        }
+      };
+      fetchNote();
+    }
+  }, [id]);
 
   const handleImageChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -139,26 +422,40 @@ function AdminNoteForm() {
         previewImages.push(imgUrl);
       }
 
-      // Check total size to prevent Firestore 1MB limit error
+      // Check total size to prevent Firestore limits (approx 1MB limit for document size)
       let totalSize = 0;
       previewImages.forEach(img => totalSize += img.length);
       
-      // 1 character in base64 is roughly 1 byte. Firestore limit is 1,048,576 bytes.
-      // We leave ~100KB for other document fields and overhead.
-      if (totalSize > 900000) {
-        throw new Error(`Images are too large (${(totalSize / 1024 / 1024).toFixed(2)} MB). Because you are using the free tier without Firebase Storage, all preview images for a single note must be under 900 KB combined. Please compress your images.`);
+      // Keeping it well below 1MB to be safe with base64 overhead
+      if (totalSize > 800000) { 
+        throw new Error(`Images are too large (${(totalSize / 1024 / 1024).toFixed(2)} MB). Please compress your images to stay under ~800KB total for Firestore.`);
       }
 
-      const noteData = {
+      let noteData: any = {
         ...formData,
-        previewImages,
         rating: 0,
-        reviewCount: 0,
-        createdAt: new Date().toISOString()
+        reviewCount: 0
       };
       
-      const docRef = await addDoc(collection(db, 'notes'), noteData);
-      await updateDoc(docRef, { id: docRef.id });
+      if (formData.discountPercent !== '') {
+        noteData.discountPercent = Number(formData.discountPercent);
+      } else {
+        delete noteData.discountPercent;
+      }
+      
+      if (previewImages.length > 0) {
+        noteData.previewImages = previewImages;
+      }
+      
+      if (!id) {
+        noteData.createdAt = new Date().toISOString();
+        await addDoc(collection(db, 'notes'), noteData);
+      } else {
+        delete noteData.rating;
+        delete noteData.reviewCount;
+        await updateDoc(doc(db, 'notes', id), noteData);
+      }
+      
       navigate('/admin');
     } catch (err: any) {
       console.error("Error adding note:", err);
@@ -170,7 +467,7 @@ function AdminNoteForm() {
 
   return (
     <div className="max-w-2xl bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New Note</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{id ? 'Edit Note' : 'Add New Note'}</h2>
       
       {error && (
         <div className="mb-6 bg-red-50 text-red-600 p-3 rounded-md text-sm">
@@ -197,6 +494,8 @@ function AdminNoteForm() {
               <option value="10">10</option>
               <option value="11">11</option>
               <option value="12">12</option>
+              <option value="jee">JEE</option>
+              <option value="neet">NEET</option>
             </select>
           </div>
           <div>
@@ -211,6 +510,13 @@ function AdminNoteForm() {
             <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700">Discount Percentage (%)</label>
+            <input type="number" min="0" max="100" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: e.target.value === '' ? '' : Number(e.target.value)})} placeholder="e.g. 20 (Optional)" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
             <label className="block text-sm font-medium text-gray-700">PDF Download Link (e.g., Google Drive)</label>
             <input 
               type="url" 
@@ -218,6 +524,16 @@ function AdminNoteForm() {
               value={formData.pdfUrl}
               onChange={e => setFormData({...formData, pdfUrl: e.target.value})}
               placeholder="https://drive.google.com/file/d/..."
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Audio Note URL (Optional)</label>
+            <input 
+              type="url" 
+              value={formData.audioNoteUrl}
+              onChange={e => setFormData({...formData, audioNoteUrl: e.target.value})}
+              placeholder="https://..."
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
             />
           </div>
@@ -234,7 +550,7 @@ function AdminNoteForm() {
                 <input 
                   type="file" 
                   accept="image/png, image/jpeg" 
-                  required={num <= 3}
+                  required={num <= 3 && !id}
                   onChange={(e) => handleImageChange(index, e)} 
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
                 />
@@ -277,7 +593,8 @@ function AdminBundles() {
 
   const fetchBundles = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'bundles'));
+      const q = query(collection(db, 'bundles'));
+      const snapshot = await getDocs(q);
       setBundles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (err: any) {
       setError(err.message);
@@ -332,7 +649,10 @@ function AdminBundles() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{bundle.price}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => handleDelete(bundle.id)} className="text-red-600 hover:text-red-900 ml-4">
+                    <Link to={`/admin/bundles/edit-bundle/${bundle.id}`} className="text-indigo-600 hover:text-indigo-900 inline-block mr-4">
+                      <Edit className="w-5 h-5" />
+                    </Link>
+                    <button onClick={() => handleDelete(bundle.id)} className="text-red-600 hover:text-red-900">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </td>
@@ -347,6 +667,7 @@ function AdminBundles() {
 }
 
 function AdminBundleForm() {
+  const { id } = useParams<{id: string}>();
   const navigate = useNavigate();
   const [notes, setNotes] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -355,6 +676,7 @@ function AdminBundleForm() {
     classLevel: '9',
     subject: 'Science',
     price: 249,
+    discountPercent: '' as number | string,
     noteIds: [] as string[],
     pdfUrl: '',
     isFeatured: false
@@ -363,9 +685,34 @@ function AdminBundleForm() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (id) {
+      const fetchBundle = async () => {
+        const docRef = doc(db, 'bundles', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFormData({
+            title: data.title || '',
+            description: data.description || '',
+            classLevel: data.classLevel || '9',
+            subject: data.subject || '',
+            price: data.price || 0,
+            discountPercent: data.discountPercent !== undefined ? data.discountPercent : '',
+            noteIds: data.noteIds || [],
+            pdfUrl: data.pdfUrl || '',
+            isFeatured: data.isFeatured || false
+          });
+        }
+      };
+      fetchBundle();
+    }
+  }, [id]);
+
+  useEffect(() => {
     const fetchNotes = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'notes'));
+        const q = query(collection(db, 'notes'));
+        const snapshot = await getDocs(q);
         setNotes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (err: any) {
         setError(err.message);
@@ -388,16 +735,26 @@ function AdminBundleForm() {
       
       // Auto-collect preview images from notes of the same class and subject
       const matchingNotes = notes.filter(n => n.classLevel === formData.classLevel && n.subject.toLowerCase() === formData.subject.toLowerCase());
-      const previewImages = matchingNotes.flatMap(n => n.previewImages || []).slice(0, 10);
+      const previewImages = matchingNotes.flatMap(n => n.previewImages || []).slice(0, 5); // Kept lower to stay well within 1MB total
 
-      const bundleData = {
+      const bundleData: any = {
         ...formData,
-        previewImages,
-        createdAt: new Date().toISOString()
+        previewImages
       };
       
-      const docRef = await addDoc(collection(db, 'bundles'), bundleData);
-      await updateDoc(docRef, { id: docRef.id });
+      if (formData.discountPercent !== '') {
+        bundleData.discountPercent = Number(formData.discountPercent);
+      } else {
+        delete bundleData.discountPercent;
+      }
+      
+      if (!id) {
+        bundleData.createdAt = new Date().toISOString();
+        await addDoc(collection(db, 'bundles'), bundleData);
+      } else {
+        await updateDoc(doc(db, 'bundles', id), bundleData);
+      }
+      
       navigate('/admin/bundles');
     } catch (err: any) {
       console.error("Error adding bundle:", err);
@@ -418,7 +775,7 @@ function AdminBundleForm() {
 
   return (
     <div className="max-w-2xl bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New Bundle</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{id ? 'Edit Bundle' : 'Add New Bundle'}</h2>
       
       {error && (
         <div className="mb-6 bg-red-50 text-red-600 p-3 rounded-md text-sm">
@@ -445,6 +802,8 @@ function AdminBundleForm() {
               <option value="10">10</option>
               <option value="11">11</option>
               <option value="12">12</option>
+              <option value="jee">JEE</option>
+              <option value="neet">NEET</option>
             </select>
           </div>
           <div>
@@ -453,9 +812,15 @@ function AdminBundleForm() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
-          <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
+            <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Discount Percentage (%)</label>
+            <input type="number" min="0" max="100" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: e.target.value === '' ? '' : Number(e.target.value)})} placeholder="e.g. 20 (Optional)" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          </div>
         </div>
 
         <div className="pt-4 border-t border-gray-200">
@@ -530,7 +895,8 @@ function AdminCoupons() {
 
   const fetchCoupons = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'coupons'));
+      const q = query(collection(db, 'coupons'));
+      const snapshot = await getDocs(q);
       setCoupons(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     } catch (err: any) {
       setError(err.message);
@@ -550,6 +916,7 @@ function AdminCoupons() {
         createdAt: new Date().toISOString()
       };
       await addDoc(collection(db, 'coupons'), couponData);
+      
       setNewCoupon({ code: '', discountPercent: 10, isActive: true });
       fetchCoupons();
     } catch (err: any) {
@@ -665,32 +1032,39 @@ function AdminOrders() {
   const fetchData = async () => {
     try {
       // Fetch orders
-      const ordersSnap = await getDocs(collection(db, 'orders'));
-      const ordersData = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const ordersSnapshot = await getDocs(query(collection(db, 'orders')));
+      const ordersData = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
       // Sort orders by date descending
-      ordersData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
+      ordersData.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(ordersData);
 
-      // Fetch users to map userIds to emails/names
-      const usersSnap = await getDocs(collection(db, 'users'));
+      // Fetch users
+      const usersSnapshot = await getDocs(query(collection(db, 'users')));
       const usersMap: Record<string, any> = {};
-      usersSnap.docs.forEach(doc => {
-        usersMap[doc.id] = doc.data();
+      usersSnapshot.docs.forEach(doc => {
+        usersMap[doc.id] = { id: doc.id, ...doc.data() };
       });
       setUsers(usersMap);
 
       // Fetch notes and bundles to map itemIds to titles
-      const notesSnap = await getDocs(collection(db, 'notes'));
-      const bundlesSnap = await getDocs(collection(db, 'bundles'));
+      const notesSnapshot = await getDocs(query(collection(db, 'notes')));
+      const bundlesSnapshot = await getDocs(query(collection(db, 'bundles')));
+      const mindMapsSnapshot = await getDocs(query(collection(db, 'mindMaps')));
+      const mockTestsSnapshot = await getDocs(query(collection(db, 'mockTests')));
       
       const itemsMap: Record<string, any> = {};
-      notesSnap.docs.forEach(doc => {
-        itemsMap[doc.id] = { ...doc.data(), type: 'note' };
+      notesSnapshot.docs.forEach(doc => {
+        itemsMap[doc.id] = { id: doc.id, ...doc.data(), type: 'note' };
       });
-      bundlesSnap.docs.forEach(doc => {
-        itemsMap[doc.id] = { ...doc.data(), type: 'bundle' };
+      bundlesSnapshot.docs.forEach(doc => {
+        itemsMap[doc.id] = { id: doc.id, ...doc.data(), type: 'bundle' };
+      });
+      mindMapsSnapshot.docs.forEach(doc => {
+        itemsMap[doc.id] = { id: doc.id, ...doc.data(), type: 'mindMap' };
+      });
+      mockTestsSnapshot.docs.forEach(doc => {
+        itemsMap[doc.id] = { id: doc.id, ...doc.data(), type: 'mockTest' };
       });
       setItems(itemsMap);
 
@@ -741,9 +1115,11 @@ function AdminOrders() {
                       <ul className="text-sm text-gray-500 space-y-1">
                         {order.items?.map((item: any, idx: number) => {
                           const itemDetails = items[item.itemId];
+                          // Some older orders might have the title in the item directly
+                          const title = item.title || itemDetails?.title || 'Unknown Item';
                           return (
                             <li key={idx}>
-                              • {itemDetails?.title || 'Unknown Item'} <span className="text-xs text-gray-400">({item.type})</span>
+                              • {title} <span className="text-xs text-gray-400">({item.type})</span>
                             </li>
                           );
                         })}
@@ -800,11 +1176,26 @@ export default function Admin() {
             <Link to="/admin/bundles" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/bundles') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
               <Package className="w-4 h-4 mr-2" /> Bundles
             </Link>
+            <Link to="/admin/mind-maps" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/mind-maps') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <BrainCircuit className="w-4 h-4 mr-2" /> Mind Maps
+            </Link>
+            <Link to="/admin/mock-tests" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/mock-tests') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <FileSignature className="w-4 h-4 mr-2" /> Mock Tests
+            </Link>
             <Link to="/admin/coupons" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/coupons') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
               <Tag className="w-4 h-4 mr-2" /> Coupons
             </Link>
+            <Link to="/admin/audio-notes" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/audio-notes') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <Mic className="w-4 h-4 mr-2" /> Audio Notes
+            </Link>
+            <Link to="/admin/pdf-splitter" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/pdf-splitter') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <Scissors className="w-4 h-4 mr-2" /> PDF Splitter
+            </Link>
             <Link to="/admin/orders" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/orders') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
               <ShoppingBag className="w-4 h-4 mr-2" /> Purchase History
+            </Link>
+            <Link to="/admin/test-maker" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/test-maker') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <BrainCircuit className="w-4 h-4 mr-2" /> AI Test Maker
             </Link>
           </nav>
         </div>
@@ -814,10 +1205,23 @@ export default function Admin() {
         <Routes>
           <Route index element={<AdminNotes />} />
           <Route path="new-note" element={<AdminNoteForm />} />
+          <Route path="edit-note/:id" element={<AdminNoteForm />} />
           <Route path="bundles" element={<AdminBundles />} />
           <Route path="bundles/new-bundle" element={<AdminBundleForm />} />
+          <Route path="bundles/edit-bundle/:id" element={<AdminBundleForm />} />
+          <Route path="mind-maps" element={<AdminMindMaps />} />
+          <Route path="mind-maps/new" element={<AdminMindMapForm />} />
+          <Route path="mind-maps/edit/:id" element={<AdminMindMapForm />} />
+          <Route path="mock-tests" element={<AdminMockTests />} />
+          <Route path="mock-tests/new" element={<AdminMockTestForm />} />
+          <Route path="mock-tests/edit/:id" element={<AdminMockTestForm />} />
+          <Route path="pdf-splitter" element={<AdminPDFSplitter />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="audio-notes" element={<AdminAudioNotes />} />
+          <Route path="audio-notes/new-audio-note" element={<AdminAudioNoteForm />} />
+          <Route path="audio-notes/edit-audio-note/:id" element={<AdminAudioNoteForm />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="test-maker" element={<MockTestGenerator />} />
         </Routes>
       </div>
     </div>

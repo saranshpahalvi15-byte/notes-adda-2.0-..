@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, collection, query, where, getDocs, documentId, addDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
+import { forceDownload } from '../lib/downloadUtils';
 import { ShoppingCart, CheckCircle, Layers, Download, Star } from 'lucide-react';
 
 export default function BundleDetails() {
@@ -19,7 +20,23 @@ export default function BundleDetails() {
   // Review form state
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
+  const [originalPrice, setOriginalPrice] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(0);
+
+  useEffect(() => {
+    if (bundle && bundle.price) {
+      const getConsistentRandom = (str: string) => {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash);
+      };
+      const discount = bundle.discountPercent !== undefined && bundle.discountPercent !== null ? bundle.discountPercent : (20 + (getConsistentRandom(bundle.id || id || '') % 31));
+      setDiscountPercent(discount);
+      setOriginalPrice(Math.round((bundle.price * 100) / (100 - discount)));
+    }
+  }, [bundle, id]);
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +53,7 @@ export default function BundleDetails() {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'reviews'), reviewData);
+      const docRef = await addDoc(collection(db, 'reviews'), reviewData);
 
       // Update bundle rating
       const newReviewCount = (bundle.reviewCount || 0) + 1;
@@ -49,7 +66,7 @@ export default function BundleDetails() {
       });
 
       // Refresh data locally
-      setReviews([...reviews, reviewData]);
+      setReviews([...reviews, { id: docRef.id, ...reviewData }]);
       setBundle({ ...bundle, rating: newRating, reviewCount: newReviewCount });
       setComment('');
       setRating(5);
@@ -67,53 +84,74 @@ export default function BundleDetails() {
       if (!id) return;
       try {
         const bundleDoc = await getDoc(doc(db, 'bundles', id));
-        if (bundleDoc.exists()) {
-          const bundleData = { id: bundleDoc.id, ...bundleDoc.data() } as any;
-          setBundle(bundleData);
+        if (!bundleDoc.exists()) throw new Error("Bundle not found");
+        const bundleData = { id: bundleDoc.id, ...bundleDoc.data() } as any;
+        setBundle(bundleData);
 
-          if (bundleData.noteIds && bundleData.noteIds.length > 0) {
-            // Fetch notes in chunks of 10 due to Firestore 'in' query limits
-            const chunks = [];
-            for (let i = 0; i < bundleData.noteIds.length; i += 10) {
-              chunks.push(bundleData.noteIds.slice(i, i + 10));
+        if (bundleData.noteIds && bundleData.noteIds.length > 0) {
+          const notesQuery = query(collection(db, 'notes'), where('__name__', 'in', bundleData.noteIds));
+          const notesSnapshot = await getDocs(notesQuery);
+          setIncludedNotes(notesSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+        } else {
+          // If no specific notes selected, fetch all notes for this class and subject
+          const notesQuery = query(
+            collection(db, 'notes'), 
+            where('classLevel', '==', bundleData.classLevel),
+            where('subject', '==', bundleData.subject)
+          );
+          const notesSnapshot = await getDocs(notesQuery);
+          const matchingNotes = notesSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+          
+          // Sort notes by title to keep chapters in order if possible
+          const class9ScienceOrder = [
+            "MATTER IN OUR SURROUNDINGS",
+            "IS MATTER AROUND US PURE",
+            "ATOMS AND MOLECULES",
+            "STRUCTURE OF THE ATOM",
+            "THE FUNDAMENTAL UNIT OF LIFE",
+            "TISSUES",
+            "MOTION",
+            "FORCE AND LAWS OF MOTION",
+            "GRAVITATION",
+            "WORK AND ENERGY",
+            "SOUND",
+            "IMPROVEMENT IN FOOD RESOURCES"
+          ];
+
+          matchingNotes.sort((a: any, b: any) => {
+            if (bundleData.classLevel === '9' && bundleData.subject && bundleData.subject.toLowerCase() === 'science') {
+              const aName = a.title.split(':- ')[1]?.trim().toUpperCase() || a.title.toUpperCase();
+              const bName = b.title.split(':- ')[1]?.trim().toUpperCase() || b.title.toUpperCase();
+              const aIndex = class9ScienceOrder.indexOf(aName);
+              const bIndex = class9ScienceOrder.indexOf(bName);
+              
+              if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+              if (aIndex !== -1) return -1;
+              if (bIndex !== -1) return 1;
             }
-            
-            let allNotes: any[] = [];
-            for (const chunk of chunks) {
-              const q = query(collection(db, 'notes'), where(documentId(), 'in', chunk));
-              const snapshot = await getDocs(q);
-              allNotes = [...allNotes, ...snapshot.docs.map(d => ({ id: d.id, ...d.data() }))];
-            }
-            setIncludedNotes(allNotes);
-          } else {
-            // If no specific notes selected, fetch all notes for this class and subject
-            const q = query(
-              collection(db, 'notes'),
-              where('classLevel', '==', bundleData.classLevel),
-              where('subject', '==', bundleData.subject)
-            );
-            const snapshot = await getDocs(q);
-            const matchingNotes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            setIncludedNotes(matchingNotes);
-          }
+            return a.title.localeCompare(b.title);
+          });
+          
+          setIncludedNotes(matchingNotes);
         }
 
         // Fetch reviews
-        const reviewsQ = query(collection(db, 'reviews'), where('bundleId', '==', id));
-        const reviewsSnap = await getDocs(reviewsQ);
-        setReviews(reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const reviewsQuery = query(collection(db, 'reviews'), where('bundleId', '==', id));
+        const reviewsSnapshot = await getDocs(reviewsQuery);
+        setReviews(reviewsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
 
         // Check if user has purchased
         if (user) {
-          const ordersQ = query(
-            collection(db, 'orders'), 
+          const ordersQuery = query(
+            collection(db, 'orders'),
             where('userId', '==', user.uid),
             where('status', '==', 'completed')
           );
-          const ordersSnap = await getDocs(ordersQ);
-          const hasBought = ordersSnap.docs.some(doc => {
-            const data = doc.data();
-            return data.items && data.items.some((item: any) => item.itemId === id);
+          const ordersSnapshot = await getDocs(ordersQuery);
+          const ordersData = ordersSnapshot.docs.map(d => d.data());
+          
+          const hasBought = ordersData.some((order: any) => {
+            return order.items && order.items.some((item: any) => item.itemId === id);
           });
           setHasPurchased(hasBought);
         }
@@ -238,7 +276,7 @@ export default function BundleDetails() {
           
           <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Included Chapters ({includedNotes.length}):</h3>
-            <ul className="space-y-3 max-h-48 overflow-y-auto pr-2">
+            <ul className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
               {includedNotes.map(note => (
                 <li key={note.id} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
@@ -251,7 +289,15 @@ export default function BundleDetails() {
           <div className="flex items-center justify-between mt-auto pt-6 border-t border-gray-100">
             <div>
               <p className="text-sm text-gray-500 font-medium mb-1">Bundle Price</p>
-              <p className="text-4xl font-extrabold text-gray-900">₹{bundle.price}</p>
+              <div className="flex items-end gap-3">
+                <p className="text-4xl font-extrabold text-gray-900">₹{bundle.price}</p>
+                {originalPrice > 0 && bundle.price > 0 && (
+                  <div className="flex flex-col pb-1">
+                    <span className="text-gray-400 line-through text-lg mt-0.5">₹{originalPrice}</span>
+                    <span className="text-green-600 font-semibold text-sm">{discountPercent}% OFF</span>
+                  </div>
+                )}
+              </div>
               {!hasPurchased && <p className="text-sm text-green-600 font-medium mt-1">Save big compared to individual chapters!</p>}
             </div>
             
@@ -262,16 +308,13 @@ export default function BundleDetails() {
                   Purchased
                 </div>
                 {bundle.pdfUrl && (
-                  <a
-                    href={getDirectDownloadUrl(bundle.pdfUrl)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
-                    className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all"
+                  <button
+                    onClick={() => forceDownload(bundle.pdfUrl, `${bundle.title || 'Bundle'}.pdf`)}
+                    className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer"
                   >
                     <Download className="h-5 w-5 mr-2" />
                     Download Bundle PDF
-                  </a>
+                  </button>
                 )}
               </div>
             ) : (

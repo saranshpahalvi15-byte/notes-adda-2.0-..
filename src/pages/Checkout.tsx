@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
 import { CheckCircle, AlertCircle, CreditCard } from 'lucide-react';
 
@@ -18,13 +18,13 @@ export default function Checkout() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !profile) {
       navigate('/login');
     }
     if (items.length === 0) {
       navigate('/notes');
     }
-  }, [user, items, navigate]);
+  }, [user, profile, items, navigate]);
 
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
   const discountAmount = appliedDiscount ? (subtotal * appliedDiscount.value) / 100 : 0;
@@ -36,21 +36,26 @@ export default function Checkout() {
 
     try {
       // Check if it's a coupon
-      const q = query(collection(db, 'coupons'), where('code', '==', discountCode), where('isActive', '==', true));
-      const snapshot = await getDocs(q);
+      const couponQuery = query(
+        collection(db, 'coupons'),
+        where('code', '==', discountCode),
+        where('isActive', '==', true)
+      );
+      const couponSnapshot = await getDocs(couponQuery);
       
-      if (!snapshot.empty) {
-        const coupon = snapshot.docs[0].data();
-        setAppliedDiscount({ type: 'coupon', value: coupon.discountPercent, code: discountCode });
+      if (!couponSnapshot.empty) {
+        const couponData = couponSnapshot.docs[0].data();
+        setAppliedDiscount({ type: 'coupon', value: couponData.discountPercent, code: discountCode });
         return;
       }
 
       // Check if it's a referral code
-      const userQ = query(collection(db, 'users'), where('referralCode', '==', discountCode));
-      const userSnapshot = await getDocs(userQ);
+      const userQuery = query(collection(db, 'users'), where('referralCode', '==', discountCode));
+      const userSnapshot = await getDocs(userQuery);
       
       if (!userSnapshot.empty) {
-        if (userSnapshot.docs[0].id === user?.uid) {
+        const userData = { id: userSnapshot.docs[0].id, ...userSnapshot.docs[0].data() } as any;
+        if (userData.id === user?.uid) {
           setError("You cannot use your own referral code.");
           return;
         }
@@ -70,12 +75,27 @@ export default function Checkout() {
     setError('');
 
     try {
+      // Bypass network auth check locally because iframe drops the simulated auth cookie.
+      // We rely on Zustand's user.uid state mapping locally.
+      
       // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      const targetUid = user?.uid || profile?.id;
+      if (!targetUid) {
+        throw new Error("User session expired. Please login again.");
+      }
+      
       const orderData = {
-        userId: user.uid,
-        items: items.map(item => ({ itemId: item.id, type: item.type, price: item.price })),
+        userId: targetUid,
+        items: items.map(item => ({ 
+          itemId: item.id, 
+          type: item.type, 
+          title: item.title,
+          price: item.price,
+          ...(item.classLevel && { classLevel: item.classLevel }),
+          ...(item.billingCycle && { billingCycle: item.billingCycle })
+        })),
         subtotal,
         discountApplied: discountAmount,
         totalAmount: total,
@@ -92,7 +112,8 @@ export default function Checkout() {
         navigate('/dashboard');
       }, 3000);
     } catch (err: any) {
-      setError("Payment failed. Please try again.");
+      console.error("Payment failed with error:", err);
+      setError("Payment failed. Please try again. " + (err.message || ''));
       setLoading(false);
     }
   };
@@ -102,19 +123,8 @@ export default function Checkout() {
       <div className="max-w-md mx-auto mt-20 text-center bg-white p-10 rounded-2xl shadow-sm border border-gray-100">
         <CheckCircle className="h-20 w-20 text-green-500 mx-auto mb-6" />
         <h2 className="text-3xl font-bold text-gray-900 mb-4">Payment Successful!</h2>
-        <p className="text-gray-600 mb-4">Your notes are now available in your dashboard.</p>
+        <p className="text-gray-600 mb-8">Your notes are now available in your dashboard.</p>
         
-        {emailPreviewUrl ? (
-          <div className="mb-8 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-            <p className="text-sm text-indigo-800 mb-2 font-medium">An email receipt with download links has been sent!</p>
-            <a href={emailPreviewUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:text-indigo-800 underline break-all">
-              View Email Preview (Dev Mode)
-            </a>
-          </div>
-        ) : (
-          <p className="text-gray-600 mb-8">An email receipt with download links has been sent to your registered email.</p>
-        )}
-
         <p className="text-sm text-gray-500 animate-pulse">Redirecting to dashboard...</p>
       </div>
     );

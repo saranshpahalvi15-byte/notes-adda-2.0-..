@@ -1,29 +1,31 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import NoteCard from '../components/NoteCard';
+import { useAuthStore } from '../store/useAuthStore';
 
 export default function Bundles() {
+  const { profile } = useAuthStore();
   const [bundles, setBundles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterClass, setFilterClass] = useState('all');
   const [filterSubject, setFilterSubject] = useState('all');
 
   useEffect(() => {
     const fetchBundles = async () => {
       try {
-        const q = query(collection(db, 'bundles'), orderBy('createdAt', 'desc'));
-        const snapshot = await getDocs(q);
-        const bundlesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+        const bundlesQuery = query(collection(db, 'bundles'), orderBy('createdAt', 'desc'));
+        const bundlesSnapshot = await getDocs(bundlesQuery);
+        const bundlesData = bundlesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         // Fetch all notes to backfill preview images for older bundles
         const notesSnapshot = await getDocs(collection(db, 'notes'));
-        const allNotes = notesSnapshot.docs.map(d => d.data());
+        const allNotes = notesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
 
-        const enrichedBundles = bundlesData.map(bundle => {
+        const enrichedBundles = bundlesData.map((bundle: any) => {
           if (!bundle.previewImages || bundle.previewImages.length === 0) {
             const matchingNote = allNotes.find(n => 
               n.classLevel === bundle.classLevel && 
+              n.subject && bundle.subject && 
               n.subject.toLowerCase() === bundle.subject.toLowerCase() && 
               n.previewImages && 
               n.previewImages.length > 0
@@ -47,8 +49,8 @@ export default function Bundles() {
   }, []);
 
   const filteredBundles = bundles.filter(bundle => {
-    if (filterClass !== 'all' && bundle.classLevel !== filterClass) return false;
     if (filterSubject !== 'all' && bundle.subject !== filterSubject) return false;
+    if (profile?.classLevel && bundle.classLevel !== profile.classLevel) return false;
     return true;
   });
 
@@ -62,20 +64,6 @@ export default function Bundles() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-          <select
-            value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
-            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="all">All Classes</option>
-            <option value="9">Class 9</option>
-            <option value="10">Class 10</option>
-            <option value="11">Class 11</option>
-            <option value="12">Class 12</option>
-          </select>
-        </div>
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
           <select

@@ -1,18 +1,31 @@
+import { useState } from 'react';
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { BookOpen, LogOut, User, LayoutDashboard, Settings } from 'lucide-react';
+import { BookOpen, LogOut, User, LayoutDashboard, Settings, Menu, X, Target } from 'lucide-react';
 import AIChatWidget from './AIChatWidget';
+import GoalSelectionModal from './GoalSelectionModal';
 
 export default function Layout() {
-  const { user, profile } = useAuthStore();
+  const { user, profile, logout } = useAuthStore();
   const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
   const handleLogout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch(e) {
+      console.error(e);
+    }
+    logout();
     navigate('/');
   };
+
+  const currentGoalLabel = profile?.classLevel 
+    ? (profile.classLevel === 'jee' ? 'IIT-JEE' : profile.classLevel === 'neet' ? 'NEET' : `Class ${profile.classLevel}`)
+    : 'Select Goal';
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 text-gray-900">
@@ -32,36 +45,66 @@ export default function Layout() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <img src="/logo.svg" alt="NotesAdda Logo" className="h-10 w-auto object-contain" />
-              <span className="text-xl font-bold tracking-tight text-gray-900">NotesAdda</span>
-            </Link>
+            <div className="flex items-center">
+              <button 
+                className="lg:hidden mr-2 p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+              <Link to="/" className="flex items-center space-x-1 sm:space-x-2">
+                <img src="/logo.svg" alt="NotesAdda Logo" className="h-8 md:h-10 w-auto object-contain" />
+                <span className="text-xl md:text-2xl font-black tracking-tight whitespace-nowrap" style={{ fontFamily: "'Nunito', 'Arial Rounded MT Bold', sans-serif" }}>
+                  <span className="text-[#0B406B]">Notes</span>
+                  <span className="text-[#F47B20]">Adda</span>
+                </span>
+              </Link>
+            </div>
             
-            <nav className="hidden md:flex space-x-8">
-              <Link to="/notes" className="text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+            <nav className="hidden lg:flex space-x-1">
+              <Link to="/notes" className="text-xs xl:text-sm px-2 xl:px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
                 Chapter Wise Notes
               </Link>
-              <Link to="/bundles" className="text-gray-600 hover:text-indigo-600 font-medium transition-colors">
+              <Link to="/bundles" className="text-xs xl:text-sm px-2 xl:px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
                 Bundles
+              </Link>
+              <Link to="/mindMaps" className="text-xs xl:text-sm px-2 xl:px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
+                Mind Maps
+              </Link>
+              <Link to="/audioNotes" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
+                Audio Notes
+              </Link>
+              <Link to="/mockTests" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
+                Mock Tests
+              </Link>
+              <Link to="/ncert-corner" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors border border-indigo-100 bg-indigo-50/50">
+                NCERT Corner
               </Link>
             </nav>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               {user ? (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                  <button
+                    onClick={() => setIsGoalModalOpen(true)}
+                    className="hidden sm:flex items-center px-3 py-1.5 border border-indigo-200 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                  >
+                    <Target className="h-4 w-4 mr-1.5 text-indigo-500" />
+                    Goal: {currentGoalLabel}
+                  </button>
                   {profile?.role === 'admin' && (
-                    <Link to="/admin" className="text-gray-500 hover:text-indigo-600 flex items-center">
-                      <Settings className="h-5 w-5 mr-1" />
-                      <span className="hidden sm:inline">Admin</span>
+                    <Link to="/admin" className="text-gray-500 hover:text-indigo-600 flex items-center p-2 sm:p-0">
+                      <Settings className="h-5 w-5 sm:mr-1" />
+                      <span className="hidden lg:inline text-sm font-medium">Admin</span>
                     </Link>
                   )}
-                  <Link to="/dashboard" className="text-gray-500 hover:text-indigo-600 flex items-center">
-                    <LayoutDashboard className="h-5 w-5 mr-1" />
-                    <span className="hidden sm:inline">Dashboard</span>
+                  <Link to="/dashboard" className="text-gray-500 hover:text-indigo-600 flex items-center p-2 sm:p-0">
+                    <LayoutDashboard className="h-5 w-5 sm:mr-1" />
+                    <span className="hidden lg:inline text-sm font-medium">Dashboard</span>
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="text-gray-500 hover:text-red-600 flex items-center"
+                    className="text-gray-500 hover:text-red-600 flex items-center p-2 sm:p-0"
                   >
                     <LogOut className="h-5 w-5" />
                   </button>
@@ -69,15 +112,76 @@ export default function Layout() {
               ) : (
                 <Link
                   to="/login"
-                  className="inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 whitespace-nowrap"
                 >
-                  <User className="h-4 w-4 mr-2" />
-                  Login / Signup
+                  <User className="h-4 w-4 hidden sm:block sm:mr-1.5" />
+                  <span className="sm:hidden">Login</span>
+                  <span className="hidden sm:inline">Login/Signup</span>
                 </Link>
               )}
             </div>
           </div>
         </div>
+        
+        {/* Mobile menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden bg-white border-t border-gray-200 px-2 pt-2 pb-3 space-y-1 sm:px-3 shadow-inner w-full">
+            {user && (
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsGoalModalOpen(true);
+                }}
+                className="w-full flex items-center px-3 py-2 rounded-md text-base font-medium text-indigo-700 bg-indigo-50 mb-2"
+              >
+                <Target className="h-5 w-5 mr-2 text-indigo-500" />
+                Goal: {currentGoalLabel} (Change)
+              </button>
+            )}
+            <Link 
+              to="/notes" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Chapter Wise Notes
+            </Link>
+            <Link 
+              to="/bundles" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Bundles
+            </Link>
+            <Link 
+              to="/mindMaps" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Mind Maps
+            </Link>
+            <Link 
+              to="/audioNotes" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Audio Notes
+            </Link>
+            <Link 
+              to="/mockTests" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-indigo-600 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Mock Tests
+            </Link>
+            <Link 
+              to="/ncert-corner" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              NCERT Corner
+            </Link>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -90,7 +194,10 @@ export default function Layout() {
             <div className="col-span-1 md:col-span-1">
               <Link to="/" className="flex items-center space-x-2 mb-4">
                 <img src="/logo.svg" alt="NotesAdda Logo" className="h-8 w-auto object-contain" />
-                <span className="text-xl font-bold tracking-tight text-gray-900">NotesAdda</span>
+                <span className="text-xl font-black tracking-tight" style={{ fontFamily: "'Nunito', 'Arial Rounded MT Bold', sans-serif" }}>
+                  <span className="text-[#0B406B]">Notes</span>
+                  <span className="text-[#F47B20]">Adda</span>
+                </span>
               </Link>
               <p className="text-gray-500 text-sm">
                 Your ultimate destination for high-quality, handwritten, and printed PDF notes for Classes 9-12.
@@ -102,6 +209,9 @@ export default function Layout() {
               <ul className="space-y-3">
                 <li><Link to="/notes" className="text-sm text-gray-600 hover:text-indigo-600">Chapter Wise Notes</Link></li>
                 <li><Link to="/bundles" className="text-sm text-gray-600 hover:text-indigo-600">Bundles</Link></li>
+                <li><Link to="/mindMaps" className="text-sm text-gray-600 hover:text-indigo-600">Mind Maps</Link></li>
+                <li><Link to="/audioNotes" className="text-sm text-gray-600 hover:text-indigo-600">Audio Notes</Link></li>
+                <li><Link to="/mockTests" className="text-sm text-gray-600 hover:text-indigo-600">Mock Tests</Link></li>
                 <li><Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">My Dashboard</Link></li>
               </ul>
             </div>
@@ -109,9 +219,9 @@ export default function Layout() {
             <div>
               <h3 className="text-sm font-semibold text-gray-900 tracking-wider uppercase mb-4">Legal</h3>
               <ul className="space-y-3">
-                <li><Link to="#" className="text-sm text-gray-600 hover:text-indigo-600">Privacy Policy</Link></li>
-                <li><Link to="#" className="text-sm text-gray-600 hover:text-indigo-600">Terms of Service</Link></li>
-                <li><Link to="#" className="text-sm text-gray-600 hover:text-indigo-600">Refund Policy</Link></li>
+                <li><Link to="/privacy" className="text-sm text-gray-600 hover:text-indigo-600">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="text-sm text-gray-600 hover:text-indigo-600">Terms of Service</Link></li>
+                <li><Link to="/refund" className="text-sm text-gray-600 hover:text-indigo-600">Refund Policy</Link></li>
               </ul>
             </div>
 
@@ -136,6 +246,11 @@ export default function Layout() {
       </footer>
       
       <AIChatWidget />
+      
+      <GoalSelectionModal 
+        isOpen={isGoalModalOpen} 
+        onClose={() => setIsGoalModalOpen(false)} 
+      />
     </div>
   );
 }

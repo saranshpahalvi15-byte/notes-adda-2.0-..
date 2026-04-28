@@ -1,33 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, query, where, getDocs, doc, getDoc, documentId } from 'firebase/firestore';
 import { db } from '../firebase';
+import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Download, Copy, CheckCircle, Package, Heart, Star } from 'lucide-react';
+import { forceDownload } from '../lib/downloadUtils';
+import { Download, Copy, CheckCircle, Package, Heart, Star, Mic, BrainCircuit } from 'lucide-react';
 import NoteCard from '../components/NoteCard';
-
-const getDirectDownloadUrl = (url: string) => {
-  if (!url) return '';
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname.includes('drive.google.com')) {
-      const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        return `https://drive.google.com/uc?export=download&id=${match[1]}`;
-      }
-      const id = urlObj.searchParams.get('id');
-      if (id) {
-        return `https://drive.google.com/uc?export=download&id=${id}`;
-      }
-    } else if (urlObj.hostname.includes('dropbox.com')) {
-      urlObj.searchParams.set('dl', '1');
-      return urlObj.toString();
-    }
-  } catch (e) {
-    // ignore invalid URLs
-  }
-  return url;
-};
+import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
 
 export default function Dashboard() {
   const { user, profile } = useAuthStore();
@@ -38,6 +17,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'library' | 'wishlist'>('library');
+  
+  // Evaluation Modal State
+  const [testToEvaluate, setTestToEvaluate] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -48,20 +30,34 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         // Fetch Orders
-        const q = query(collection(db, 'orders'), where('userId', '==', user.uid), where('status', '==', 'completed'));
-        const snapshot = await getDocs(q);
-        const ordersData: any[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const ordersQuery = query(
+          collection(db, 'orders'),
+          where('userId', '==', user.uid),
+          where('status', '==', 'completed')
+        );
+        const ordersSnapshot = await getDocs(ordersQuery);
+        const ordersData = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
         setOrders(ordersData);
 
         // Extract all purchased items
         const itemsList: any[] = [];
+
         for (const order of ordersData) {
-          if (order.items && Array.isArray(order.items)) {
-            for (const item of order.items) {
-              const itemRef = doc(db, item.type === 'note' ? 'notes' : 'bundles', item.itemId);
-              const itemSnap = await getDoc(itemRef);
-              if (itemSnap.exists()) {
-                itemsList.push({ id: itemSnap.id, ...itemSnap.data(), type: item.type, orderId: order.id });
+          const orderWithItems = order as any;
+          if (orderWithItems.items && Array.isArray(orderWithItems.items)) {
+            for (const item of orderWithItems.items) {
+              if (item.type !== 'subscription') {
+                try {
+                  const collectionName = item.type === 'note' ? 'notes' : item.type === 'mindMap' ? 'mindMaps' : item.type === 'mockTest' ? 'mockTests' : item.type === 'audioNote' ? 'audioNotes' : 'bundles';
+                  const itemDoc = await getDoc(doc(db, collectionName, item.itemId));
+                  
+                  if (itemDoc.exists()) {
+                    itemsList.push({ id: itemDoc.id, ...itemDoc.data(), type: item.type, orderId: order.id });
+                  }
+                } catch(e) {
+                   console.error("Error fetching individual purchased item details", e);
+                }
               }
             }
           }
@@ -69,29 +65,52 @@ export default function Dashboard() {
         setPurchasedItems(itemsList);
 
         // Fetch Wishlist
-        if (profile?.wishlist && profile.wishlist.length > 0) {
-          const wishlistData: any[] = [];
-          
-          // Chunk the wishlist array to handle Firestore 'in' limit of 10
-          const chunks = [];
-          for (let i = 0; i < profile.wishlist.length; i += 10) {
-            chunks.push(profile.wishlist.slice(i, i + 10));
-          }
-          
-          for (const chunk of chunks) {
-            const notesQ = query(collection(db, 'notes'), where(documentId(), 'in', chunk));
-            const bundlesQ = query(collection(db, 'bundles'), where(documentId(), 'in', chunk));
+        const wishlistData: any[] = [];
+        const downloadedNotesData: any[] = [];
+
+        try {
+          if (profile?.wishlist && profile.wishlist.length > 0) {
+            const notesQuery = query(collection(db, 'notes'), where('__name__', 'in', profile.wishlist));
+            const notesSnapshot = await getDocs(notesQuery);
+            notesSnapshot.docs.forEach(d => wishlistData.push({ id: d.id, ...d.data(), type: 'note' }));
             
-            const [notesSnap, bundlesSnap] = await Promise.all([getDocs(notesQ), getDocs(bundlesQ)]);
-            
-            wishlistData.push(...notesSnap.docs.map(d => ({ id: d.id, ...d.data(), type: 'note' })));
-            wishlistData.push(...bundlesSnap.docs.map(d => ({ id: d.id, ...d.data(), type: 'bundle' })));
+            const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', profile.wishlist));
+            const bundlesSnapshot = await getDocs(bundlesQuery);
+            bundlesSnapshot.docs.forEach(d => wishlistData.push({ id: d.id, ...d.data(), type: 'bundle' }));
+
+            const mindMapsQuery = query(collection(db, 'mindMaps'), where('__name__', 'in', profile.wishlist));
+            const mindMapsSnapshot = await getDocs(mindMapsQuery);
+            mindMapsSnapshot.docs.forEach(d => wishlistData.push({ id: d.id, ...d.data(), type: 'mindMap' }));
+
+            const mockTestsQuery = query(collection(db, 'mockTests'), where('__name__', 'in', profile.wishlist));
+            const mockTestsSnapshot = await getDocs(mockTestsQuery);
+            mockTestsSnapshot.docs.forEach(d => wishlistData.push({ id: d.id, ...d.data(), type: 'mockTest' }));
           }
-          
-          setWishlistItems(wishlistData);
-        } else {
-          setWishlistItems([]);
+        } catch (e) {
+          console.error("Failed fetching wishlist", e);
         }
+        setWishlistItems(wishlistData);
+
+        try {
+          if (profile?.downloadedNotes && profile.downloadedNotes.length > 0) {
+            const downloadedNotesQuery = query(collection(db, 'notes'), where('__name__', 'in', profile.downloadedNotes));
+            const downloadedNotesSnapshot = await getDocs(downloadedNotesQuery);
+            downloadedNotesSnapshot.docs.forEach(d => downloadedNotesData.push({ id: d.id, ...d.data(), type: 'note', fromCredits: true }));
+          }
+        } catch(e) {
+          console.error("Failed fetching downloaded notes", e);
+        }
+        
+
+
+        // Combine direct purchases and credit downloads, avoiding duplicates
+        const allPurchased = [...itemsList];
+        for (const dn of downloadedNotesData) {
+          if (!allPurchased.some(p => p.id === dn.id)) {
+            allPurchased.push(dn);
+          }
+        }
+        setPurchasedItems(allPurchased);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -126,7 +145,8 @@ export default function Dashboard() {
         <p className="text-gray-500 mt-2">Manage your purchased notes and referral rewards.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
         {/* Referral Card */}
         <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-md">
           <h3 className="text-lg font-semibold mb-2 opacity-90">Your Referral Code</h3>
@@ -198,26 +218,23 @@ export default function Dashboard() {
                 <li key={`${item.id}-${idx}`} className="p-6 hover:bg-gray-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="h-16 w-16 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {item.type === 'bundle' ? <Package className="h-8 w-8 text-indigo-600" /> : <Download className="h-8 w-8 text-indigo-600" />}
+                      {item.type === 'bundle' ? <Package className="h-8 w-8 text-indigo-600" /> : item.type === 'audioNote' ? <Mic className="h-8 w-8 text-indigo-600" /> : <Download className="h-8 w-8 text-indigo-600" />}
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">{item.title}</h3>
-                      <p className="text-sm text-gray-500 capitalize">{item.type} • Class {item.classLevel} • {item.subject}</p>
+                      <p className="text-sm text-gray-500 capitalize">{item.type} • Class {item.classLevel} {item.subject ? `• ${item.subject}` : ''}</p>
                     </div>
                   </div>
                   <div className="flex flex-col sm:items-end gap-2">
                     {item.type === 'note' ? (
                       <div className="flex flex-col gap-2">
-                        <a 
-                          href={getDirectDownloadUrl(item.pdfUrl)} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          download
-                          className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors"
+                        <button 
+                          onClick={() => forceDownload(item.pdfUrl, `${item.title || 'Note'}.pdf`)}
+                          className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download PDF
-                        </a>
+                        </button>
                         <button 
                           onClick={() => navigate(`/notes/${item.id}`)}
                           className="inline-flex items-center justify-center px-4 py-2 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-lg text-sm font-medium transition-colors"
@@ -226,19 +243,37 @@ export default function Dashboard() {
                           Rate & Review
                         </button>
                       </div>
+                    ) : item.type === 'mockTest' ? (
+                      <div className="flex flex-col gap-2">
+                        <button 
+                          onClick={() => forceDownload(item.pdfUrl, `${item.title || 'Mock Test'}.pdf`)}
+                          className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Test PDF
+                        </button>
+                        <button 
+                          onClick={() => setTestToEvaluate(item)}
+                          className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                        >
+                          <BrainCircuit className="h-4 w-4 mr-2" />
+                          Get your answer checked by experts
+                        </button>
+                      </div>
+                    ) : item.type === 'audioNote' ? (
+                      <div className="flex flex-col gap-2">
+                        <audio controls controlsList="nodownload" src={item.audioUrl} className="w-full max-w-xs" />
+                      </div>
                     ) : (
                       <div className="flex flex-col gap-2">
                         {item.pdfUrl && (
-                          <a 
-                            href={getDirectDownloadUrl(item.pdfUrl)} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            download
-                            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors"
+                          <button 
+                            onClick={() => forceDownload(item.pdfUrl, `${item.title || 'Bundle'}.pdf`)}
+                            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                           >
                             <Download className="h-4 w-4 mr-2" />
                             Download Bundle PDF
-                          </a>
+                          </button>
                         )}
                         <div className="flex gap-2">
                           <button 
@@ -257,7 +292,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )}
-                    <span className="text-xs text-gray-400 mt-1">Order ID: {item.orderId.substring(0, 8)}...</span>
+                    <span className="text-xs text-gray-400 mt-1">Order ID: {item.orderId?.substring(0, 8) ?? 'N/A'}...</span>
                   </div>
                 </li>
               ))}
@@ -277,7 +312,7 @@ export default function Dashboard() {
               </button>
             </div>
           )
-        ) : (
+        ) : activeTab === 'wishlist' ? (
           <div className="p-6">
             {wishlistItems.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -312,8 +347,14 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </div>
+
+      <MockTestEvaluationModal 
+        isOpen={!!testToEvaluate} 
+        onClose={() => setTestToEvaluate(null)} 
+        mockTest={testToEvaluate} 
+      />
     </div>
   );
 }

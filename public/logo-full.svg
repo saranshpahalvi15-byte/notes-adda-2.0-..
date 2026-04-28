@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 350">
-  <g transform="translate(45, 30) scale(1.15)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 350">
+  <g transform="translate(20, 30) scale(1.15)">
     <!-- Orange Speech Bubble Tail -->
     <path d="M 150 250 Q 140 280 130 290 Q 150 280 180 255 Z" fill="#F47B20" stroke="#0B3051" stroke-width="10" stroke-linejoin="round"/>
 
@@ -44,5 +44,9 @@
       <!-- Eraser -->
       <path d="M 0 10 L 0 20 L 30 20 L 30 10 Q 30 -5 15 -5 Q 0 -5 0 10 Z" fill="#F47B20" stroke="#0B3051" stroke-width="10" />
     </g>
+  </g>
+  
+  <g transform="translate(380, 220)">
+    <text font-family="Nunito, 'Arial Rounded MT Bold', sans-serif" font-weight="900" font-size="160" fill="#0B406B">Notes<tspan fill="#F47B20">Adda</tspan></text>
   </g>
 </svg>
