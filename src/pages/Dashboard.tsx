@@ -264,7 +264,7 @@ export default function Dashboard() {
                       <div className="flex flex-col gap-2">
                         <audio controls controlsList="nodownload" src={item.audioUrl} className="w-full max-w-xs" />
                       </div>
-                    ) : (
+                    ) : item.type === 'bundle' ? (
                       <div className="flex flex-col gap-2">
                         {item.pdfUrl && (
                           <button 
@@ -290,6 +290,25 @@ export default function Dashboard() {
                             Rate
                           </button>
                         </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {item.pdfUrl && (
+                          <button 
+                            onClick={() => forceDownload(item.pdfUrl, `${item.title || 'Mind Map'}.pdf`)}
+                            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download Mind Map PDF
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => navigate(`/mind-maps/${item.id}`)}
+                          className="inline-flex items-center justify-center px-4 py-2 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Star className="h-4 w-4 mr-2 text-amber-500" />
+                          Rate & Review
+                        </button>
                       </div>
                     )}
                     <span className="text-xs text-gray-400 mt-1">Order ID: {item.orderId?.substring(0, 8) ?? 'N/A'}...</span>

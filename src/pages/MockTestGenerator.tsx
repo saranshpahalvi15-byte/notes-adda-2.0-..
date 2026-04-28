@@ -90,7 +90,7 @@ The output MUST be structured as follows:
 Format the output clearly in Markdown. Ensure the questions are accurate and directly related to the provided text.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-3-flash-preview',
         contents: [
           prompt,
           {

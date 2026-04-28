@@ -117,7 +117,7 @@ Your task:
 - Clearly state the Total Marks obtained out of ${maxMarks || 100} at the end.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-pro', // use a pro model for better reasoning and pdf handling
+        model: 'gemini-3-flash-preview',
         contents: [
           {
             role: 'user',
