@@ -23,6 +23,7 @@ export default function BundleDetails() {
   // Review form state
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
   const [originalPrice, setOriginalPrice] = useState(0);
   const [discountPercent, setDiscountPercent] = useState(0);
 
