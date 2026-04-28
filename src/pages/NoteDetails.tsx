@@ -24,7 +24,7 @@ export default function NoteDetails() {
   // Review form state
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
   const [downloading, setDownloading] = useState(false);
   
@@ -122,7 +122,7 @@ export default function NoteDetails() {
     if (!user || !profile || !id) return;
 
     try {
-      setSubmittingReview(true);
+      setIsSubmittingReview(true);
       const reviewData = {
         noteId: id,
         userId: user.uid,
@@ -154,7 +154,7 @@ export default function NoteDetails() {
       console.error("Error submitting review:", error);
       alert("Failed to submit review");
     } finally {
-      setSubmittingReview(false);
+      setIsSubmittingReview(false);
     }
   };
 
@@ -350,10 +350,10 @@ export default function NoteDetails() {
             </div>
             <button
               type="submit"
-              disabled={submittingReview}
+              disabled={isSubmittingReview}
               className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50"
             >
-              {submittingReview ? 'Submitting...' : 'Submit Review'}
+              {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
             </button>
           </form>
         )}
