@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import path from "path";
 import cors from "cors";
@@ -25,7 +24,9 @@ app.get("/api/debug-env", (req, res) => {
   res.json({ 
     hasKey: !!apiKey,
     keyPrefix: apiKey ? apiKey.substring(0, 5) : "MISSING",
-    keyLength: apiKey ? apiKey.length : 0
+    keyLength: apiKey ? apiKey.length : 0,
+    isVercel: !!process.env.VERCEL,
+    nodeEnv: process.env.NODE_ENV
   });
 });
 
@@ -235,6 +236,7 @@ async function startServer() {
   // Vite middleware or Static files
   if (!process.env.VERCEL) {
     if (process.env.NODE_ENV !== "production") {
+      const { createServer: createViteServer } = await import("vite");
       const vite = await createViteServer({
         server: { middlewareMode: true },
         appType: "spa",
