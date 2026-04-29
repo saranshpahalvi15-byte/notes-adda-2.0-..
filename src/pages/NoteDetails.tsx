@@ -5,6 +5,7 @@ import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } fro
 import { useAuthStore } from '../store/useAuthStore';
 import { forceDownload } from '../lib/downloadUtils';
 import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic } from 'lucide-react';
+import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
 
 export default function NoteDetails() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function NoteDetails() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
   
   const [originalPrice, setOriginalPrice] = useState(0);
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -314,11 +316,11 @@ export default function NoteDetails() {
               {hasPurchased ? (
                 <div className="flex gap-4">
                   <button 
-                    onClick={() => setIsReading(true)}
+                    onClick={() => isMockTest ? setIsEvaluationOpen(true) : setIsReading(true)}
                     className="flex items-center justify-center px-6 py-3 border border-transparent text-lg font-medium rounded-xl text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-all cursor-pointer"
                   >
                     <BookOpen className="h-5 w-5 mr-2" />
-                    Read Notes
+                    {isMockTest ? 'Get your answers evaluated by experts' : 'Read Notes'}
                   </button>
                   <button 
                     onClick={handleDownload}
@@ -440,6 +442,13 @@ export default function NoteDetails() {
           </div>
         </div>
       )}
+
+      {/* Mock Test Evaluation Modal */}
+      <MockTestEvaluationModal 
+        isOpen={isEvaluationOpen}
+        onClose={() => setIsEvaluationOpen(false)}
+        mockTest={note}
+      />
     </div>
   );
 }

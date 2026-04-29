@@ -262,7 +262,7 @@ export default function Dashboard() {
                           className="inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 rounded-lg text-sm font-medium transition-colors shadow-sm"
                         >
                           <BrainCircuit className="h-4 w-4 mr-2" />
-                          Get your answer checked by experts
+                          Get your answers evaluated by experts
                         </button>
                       </div>
                     ) : item.type === 'audioNote' ? (
