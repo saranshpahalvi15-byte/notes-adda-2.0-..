@@ -89,19 +89,28 @@ export default function NoteDetails() {
             if (boughtDirectly || profile?.role === 'admin') {
               setHasPurchased(true);
             } else if (bundleIds.length > 0) {
-              // Check if any purchased bundle contains this item
-              const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', bundleIds));
-              const bundlesSnapshot = await getDocs(bundlesQuery);
+              // Check if any purchased bundle contains this item (chunked because 'in' query limit is 10)
               let foundInBundle = false;
-              
-              const idField = isMindMap ? 'mindMapIds' : isMockTest ? 'mockTestIds' : 'noteIds';
-              
-              bundlesSnapshot.forEach(docSnap => {
-                const bundleData = docSnap.data();
-                if (bundleData[idField] && Array.isArray(bundleData[idField]) && bundleData[idField].includes(id)) {
-                  foundInBundle = true;
-                }
-              });
+              const chunks = [];
+              for (let i = 0; i < bundleIds.length; i += 10) {
+                chunks.push(bundleIds.slice(i, i + 10));
+              }
+
+              for (const chunk of chunks) {
+                if (foundInBundle) break;
+                
+                const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', chunk));
+                const bundlesSnapshot = await getDocs(bundlesQuery);
+                
+                const idField = isMindMap ? 'mindMapIds' : isMockTest ? 'mockTestIds' : 'noteIds';
+                
+                bundlesSnapshot.forEach(docSnap => {
+                  const bundleData = docSnap.data();
+                  if (bundleData[idField] && Array.isArray(bundleData[idField]) && bundleData[idField].includes(id)) {
+                    foundInBundle = true;
+                  }
+                });
+              }
               setHasPurchased(foundInBundle);
             } else {
               setHasPurchased(false);

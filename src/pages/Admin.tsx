@@ -172,7 +172,7 @@ function AdminAudioNotes() {
 function AdminAudioNoteForm() {
   const { id } = useParams<{id: string}>();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ title: '', classLevel: '9', audioUrl: '', noteId: '', price: 5, discountPercent: '' as number | string });
+  const [formData, setFormData] = useState({ title: '', description: '', subject: 'Science', classLevel: '9', audioUrl: '', noteId: '', price: 5, discountPercent: '' as number | string });
   const [notes, setNotes] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -187,6 +187,8 @@ function AdminAudioNoteForm() {
           const data = docSnap.data();
           setFormData({
             title: data.title || '',
+            description: data.description || '',
+            subject: data.subject || 'Science',
             classLevel: data.classLevel || '9',
             audioUrl: data.audioUrl || '',
             noteId: data.noteId || '',
@@ -255,6 +257,8 @@ function AdminAudioNoteForm() {
 
       const audioNoteData: any = { 
         title: formData.title,
+        description: formData.description,
+        subject: formData.subject,
         classLevel: formData.classLevel,
         audioUrl: finalAudioUrl,
         noteId: formData.noteId === '' ? null : formData.noteId,
@@ -290,18 +294,30 @@ function AdminAudioNoteForm() {
           <input type="text" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
-          <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" />
+          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows={3} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Discount Percentage (%)</label>
-          <input type="number" min="0" max="100" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: e.target.value === '' ? '' : Number(e.target.value)})} placeholder="e.g. 20 (Optional)" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Class</label>
+            <select value={formData.classLevel} onChange={e => setFormData({...formData, classLevel: e.target.value, noteId: ''})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
+              <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="jee">JEE</option><option value="neet">NEET</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Subject</label>
+            <input type="text" required value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Class</label>
-          <select value={formData.classLevel} onChange={e => setFormData({...formData, classLevel: e.target.value, noteId: ''})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3">
-            <option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="jee">JEE</option><option value="neet">NEET</option>
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Price (₹)</label>
+            <input type="number" required min="0" value={formData.price} onChange={e => setFormData({...formData, price: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Discount Percentage (%)</label>
+            <input type="number" min="0" max="100" value={formData.discountPercent} onChange={e => setFormData({...formData, discountPercent: e.target.value === '' ? '' : Number(e.target.value)})} placeholder="e.g. 20 (Optional)" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500" />
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">Audio URL</label>

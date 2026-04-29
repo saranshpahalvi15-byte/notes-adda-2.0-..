@@ -33,8 +33,7 @@ export default function AudioNotes() {
         if (user) {
           const ordersQuery = query(
             collection(db, 'orders'), 
-            where('userId', '==', user.uid),
-            where('status', '==', 'completed')
+            where('userId', '==', user.uid)
           );
           const ordersSnapshot = await getDocs(ordersQuery);
           const boughtIds = new Set<string>();
@@ -42,27 +41,37 @@ export default function AudioNotes() {
 
           ordersSnapshot.forEach(docSnap => {
             const orderData = docSnap.data();
-            if (orderData.items) {
-              orderData.items.forEach((item: any) => {
-                if (item.type === 'audioNote') {
-                  boughtIds.add(item.itemId);
-                } else if (item.type === 'bundle') {
-                  bundleIds.push(item.itemId);
-                }
-              });
+            // Consider order as valid if status is 'completed' OR if status field is missing (legacy)
+            if (orderData.status === 'completed' || !orderData.status) {
+              if (orderData.items) {
+                orderData.items.forEach((item: any) => {
+                  if (item.type === 'audioNote') {
+                    boughtIds.add(item.itemId);
+                  } else if (item.type === 'bundle') {
+                    bundleIds.push(item.itemId);
+                  }
+                });
+              }
             }
           });
 
-          // Fetch included IDs from purchased bundles
+          // Fetch included IDs from purchased bundles (chunked because 'in' query limit is 10)
           if (bundleIds.length > 0) {
-            const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', bundleIds));
-            const bundlesSnapshot = await getDocs(bundlesQuery);
-            bundlesSnapshot.forEach(docSnap => {
-              const bundleData = docSnap.data();
-              if (bundleData.audioNoteIds && Array.isArray(bundleData.audioNoteIds)) {
-                bundleData.audioNoteIds.forEach((id: string) => boughtIds.add(id));
-              }
-            });
+            const chunks = [];
+            for (let i = 0; i < bundleIds.length; i += 10) {
+              chunks.push(bundleIds.slice(i, i + 10));
+            }
+
+            for (const chunk of chunks) {
+              const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', chunk));
+              const bundlesSnapshot = await getDocs(bundlesQuery);
+              bundlesSnapshot.forEach(docSnap => {
+                const bundleData = docSnap.data();
+                if (bundleData.audioNoteIds && Array.isArray(bundleData.audioNoteIds)) {
+                  bundleData.audioNoteIds.forEach((id: string) => boughtIds.add(id));
+                }
+              });
+            }
           }
 
           setPurchasedIds(boughtIds);
@@ -141,24 +150,43 @@ export default function AudioNotes() {
       const current = audioRef.current.currentTime;
       const total = audioRef.current.duration;
       setCurrentTime(formatTime(current));
-      setProgress((current / total) * 100);
+      if (isFinite(total) && total > 0) {
+        setProgress((current / total) * 100);
+      }
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(formatTime(audioRef.current.duration));
-      audioRef.current.play();
+      if (isFinite(audioRef.current.duration)) {
+        setDuration(formatTime(audioRef.current.duration));
+      }
+      audioRef.current.play().catch(err => {
+        console.error("Autoplay failed:", err);
+        setIsPlaying(false);
+      });
       setIsPlaying(true);
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current) {
+    if (audioRef.current && isFinite(audioRef.current.duration)) {
       const seekTime = (Number(e.target.value) / 100) * audioRef.current.duration;
-      audioRef.current.currentTime = seekTime;
-      setProgress(Number(e.target.value));
+      if (isFinite(seekTime)) {
+        audioRef.current.currentTime = seekTime;
+        setProgress(Number(e.target.value));
+      }
     }
+  };
+
+  const handleAudioError = (e: any) => {
+    console.error("Audio Load Error:", e);
+    // If the element has no supported sources, we should handle it
+    if (audioRef.current?.error) {
+      console.error("Audio detail:", audioRef.current.error.message);
+    }
+    alert("This audio file could not be loaded. It might be in an unsupported format or the link might be broken.");
+    setIsPlaying(false);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -289,6 +317,7 @@ export default function AudioNotes() {
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onEnded={() => setIsPlaying(false)}
+                onError={handleAudioError}
               />
               
               {/* Progress Bar */}

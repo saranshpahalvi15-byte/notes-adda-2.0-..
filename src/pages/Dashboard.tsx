@@ -267,7 +267,16 @@ export default function Dashboard() {
                       </div>
                     ) : item.type === 'audioNote' ? (
                       <div className="flex flex-col gap-2">
-                        <audio controls controlsList="nodownload" src={item.audioUrl} className="w-full max-w-xs" />
+                        <audio 
+                          controls 
+                          controlsList="nodownload" 
+                          src={item.audioUrl} 
+                          className="w-full max-w-xs" 
+                          onError={(e: any) => {
+                            console.error("Dashboard Audio Load Error:", e);
+                            if (e.target.error) console.error("Detail:", e.target.error.message);
+                          }}
+                        />
                       </div>
                     ) : item.type === 'bundle' ? (
                       <div className="flex flex-col gap-2">

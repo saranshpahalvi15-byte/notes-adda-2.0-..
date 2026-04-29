@@ -168,14 +168,17 @@ export default function BundleDetails() {
         if (user) {
           const ordersQuery = query(
             collection(db, 'orders'),
-            where('userId', '==', user.uid),
-            where('status', '==', 'completed')
+            where('userId', '==', user.uid)
           );
           const ordersSnapshot = await getDocs(ordersQuery);
           const ordersData = ordersSnapshot.docs.map(d => d.data());
           
           const hasBought = ordersData.some((order: any) => {
-            return order.items && order.items.some((item: any) => item.itemId === id);
+            // Consider order as valid if status is 'completed' OR if status field is missing (legacy)
+            if (order.status === 'completed' || !order.status) {
+              return order.items && order.items.some((item: any) => item.itemId === id);
+            }
+            return false;
           });
           setHasPurchased(hasBought);
         }
