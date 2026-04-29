@@ -5,8 +5,9 @@ import path from "path";
 import cors from "cors";
 import { GoogleGenAI } from '@google/genai';
 
-async function startServer() {
-  const app = express();
+export const app = express();
+
+export async function startServer() {
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
   // Enable CORS for all origins (allows Vercel frontend to talk to Render backend)
@@ -265,9 +266,17 @@ Your task:
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only listen if not on Vercel
+  if (!process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.error(`Server running on http://localhost:${PORT}`);
+    });
+  }
 }
 
-startServer();
+// Always run startServer to register routes on the app instance
+startServer().catch(err => {
+  console.error("Failed to start server:", err);
+});
+
+export default app;

@@ -66,7 +66,16 @@ export default function MockTestEvaluationModal({ isOpen, onClose, mockTest }: M
         })
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response:", text);
+        throw new Error(`Server returned an unexpected response (Status ${response.status}). Please check if the backend is configured correctly.`);
+      }
+
       if (!response.ok) throw new Error(data.error || 'Failed to evaluate mock test');
 
       setEvaluation(data.evaluation);
