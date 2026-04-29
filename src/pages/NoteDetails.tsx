@@ -3,8 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { forceDownload } from '../lib/downloadUtils';
-import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic } from 'lucide-react';
+import { forceDownload, getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
+import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic, Volume2, VolumeX, Pause, Play } from 'lucide-react';
 import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
 
 export default function NoteDetails() {
@@ -191,16 +191,6 @@ export default function NoteDetails() {
     }
   };
 
-  const getDrivePreviewUrl = (url: string) => {
-    if (!url) return '';
-    try {
-      const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (match && match[1]) {
-        return `https://drive.google.com/file/d/${match[1]}/preview?rm=minimal`;
-      }
-    } catch (e) {}
-    return url;
-  };
 
   if (loading) {
     return (
@@ -299,6 +289,42 @@ export default function NoteDetails() {
                 </li>
               </ul>
             </div>
+
+            {/* Audio Note section */}
+            {hasPurchased && note.audioNoteUrl && (
+              <div className="mb-8 bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                <div className="flex items-center mb-4">
+                  <div className="bg-indigo-600 p-2 rounded-lg mr-3">
+                    <Mic className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Audio Explanation</h3>
+                    <p className="text-sm text-gray-500">Listen to the expert overview of this chapter.</p>
+                  </div>
+                </div>
+                {note.audioNoteUrl && note.audioNoteUrl.includes('drive.google.com') ? (
+                  <div className="w-full h-32 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 mb-4 relative">
+                    <iframe 
+                      src={getDrivePreviewUrl(note.audioNoteUrl)} 
+                      className="absolute left-0 w-full border-0"
+                      style={{ top: '-56px', height: 'calc(100% + 56px)' }}
+                      allow="autoplay"
+                      title="Audio Player"
+                    ></iframe>
+                  </div>
+                ) : (
+                  <audio 
+                    controls 
+                    controlsList="nodownload" 
+                    src={getDirectDownloadUrl(note.audioNoteUrl)} 
+                    className="w-full"
+                    onError={(e: any) => {
+                      console.error("NoteDetails Audio Error:", e);
+                    }}
+                  />
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-auto pt-6 border-t border-gray-100 gap-4">
               <div>

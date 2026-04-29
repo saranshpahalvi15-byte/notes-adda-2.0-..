@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { forceDownload } from '../lib/downloadUtils';
+import { forceDownload, getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
 import { Download, Copy, CheckCircle, Package, Heart, Star, Mic, BrainCircuit } from 'lucide-react';
 import NoteCard from '../components/NoteCard';
 import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
@@ -267,16 +267,28 @@ export default function Dashboard() {
                       </div>
                     ) : item.type === 'audioNote' ? (
                       <div className="flex flex-col gap-2">
-                        <audio 
-                          controls 
-                          controlsList="nodownload" 
-                          src={item.audioUrl} 
-                          className="w-full max-w-xs" 
-                          onError={(e: any) => {
-                            console.error("Dashboard Audio Load Error:", e);
-                            if (e.target.error) console.error("Detail:", e.target.error.message);
-                          }}
-                        />
+                        {item.audioUrl && item.audioUrl.includes('drive.google.com') ? (
+                          <div className="w-full max-w-xs h-32 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 relative">
+                            <iframe 
+                              src={getDrivePreviewUrl(item.audioUrl)} 
+                              className="absolute left-0 w-full border-0"
+                              style={{ top: '-56px', height: 'calc(100% + 56px)' }}
+                              allow="autoplay"
+                              title="Audio Player"
+                            ></iframe>
+                          </div>
+                        ) : (
+                          <audio 
+                            controls 
+                            controlsList="nodownload" 
+                            src={getDirectDownloadUrl(item.audioUrl)} 
+                            className="w-full max-w-xs" 
+                            onError={(e: any) => {
+                              console.error("Dashboard Audio Load Error:", e);
+                              if ((e.target as any).error) console.error("Detail:", (e.target as any).error.message);
+                            }}
+                          />
+                        )}
                       </div>
                     ) : item.type === 'bundle' ? (
                       <div className="flex flex-col gap-2">

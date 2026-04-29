@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
 import { Mic, Play, X, Pause, Volume2, VolumeX, Lock, ShoppingCart } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';
@@ -187,6 +188,7 @@ export default function AudioNotes() {
     }
     alert("This audio file could not be loaded. It might be in an unsupported format or the link might be broken.");
     setIsPlaying(false);
+    setSelectedNote(null);
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,62 +313,79 @@ export default function AudioNotes() {
             </div>
             
             <div className="p-6 bg-white">
-              <audio 
-                ref={audioRef} 
-                src={selectedNote.audioUrl} 
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
-                onEnded={() => setIsPlaying(false)}
-                onError={handleAudioError}
-              />
-              
-              {/* Progress Bar */}
-              <div className="mb-6">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={progress} 
-                  onChange={handleSeek}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-                <div className="flex justify-between text-xs font-medium text-gray-500 mt-2">
-                  <span>{currentTime}</span>
-                  <span>{duration}</span>
+              {selectedNote.audioUrl && selectedNote.audioUrl.includes('drive.google.com') ? (
+                <div className="w-full aspect-video sm:aspect-auto sm:h-40 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 mb-4 relative">
+                  <iframe 
+                    src={getDrivePreviewUrl(selectedNote.audioUrl)} 
+                    className="absolute left-0 w-full border-0"
+                    style={{ top: '-56px', height: 'calc(100% + 56px)' }}
+                    allow="autoplay"
+                    title="Audio Player"
+                  ></iframe>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 text-center text-[10px] text-gray-400 bg-white/80 backdrop-blur-sm border-t border-gray-100">
+                    Secure Drive Player
+                  </div>
                 </div>
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center justify-between">
-                {/* Volume control */}
-                <div className="flex items-center group relative w-1/3">
-                  <button onClick={toggleMute} className="text-gray-500 hover:text-indigo-600 transition-colors p-2">
-                    {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                  </button>
-                  <label className="sr-only">Volume</label>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="1" 
-                    step="0.01" 
-                    value={volume}
-                    onChange={handleVolumeChange}
-                    className="w-20 h-1.5 ml-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+              ) : (
+                <>
+                  <audio 
+                    ref={audioRef} 
+                    src={getDirectDownloadUrl(selectedNote.audioUrl)} 
+                    onTimeUpdate={handleTimeUpdate}
+                    onLoadedMetadata={handleLoadedMetadata}
+                    onEnded={() => setIsPlaying(false)}
+                    onError={handleAudioError}
                   />
-                </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="mb-6">
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={progress} 
+                      onChange={handleSeek}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                    />
+                    <div className="flex justify-between text-xs font-medium text-gray-500 mt-2">
+                      <span>{currentTime}</span>
+                      <span>{duration}</span>
+                    </div>
+                  </div>
 
-                {/* Play/Pause */}
-                <div className="flex justify-center w-1/3">
-                  <button 
-                    onClick={togglePlayPause} 
-                    className="w-14 h-14 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-transform hover:scale-105"
-                  >
-                    {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1 fill-white" />}
-                  </button>
-                </div>
+                  {/* Controls */}
+                  <div className="flex items-center justify-between">
+                    {/* Volume control */}
+                    <div className="flex items-center group relative w-1/3">
+                      <button onClick={toggleMute} className="text-gray-500 hover:text-indigo-600 transition-colors p-2">
+                        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                      </button>
+                      <label className="sr-only">Volume</label>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.01" 
+                        value={volume}
+                        onChange={handleVolumeChange}
+                        className="w-20 h-1.5 ml-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
+                    </div>
 
-                <div className="w-1/3"></div>
-              </div>
+                    {/* Play/Pause */}
+                    <div className="flex justify-center w-1/3">
+                      <button 
+                        onClick={togglePlayPause} 
+                        className="w-14 h-14 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-transform hover:scale-105"
+                      >
+                        {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1 fill-white" />}
+                      </button>
+                    </div>
+
+                    <div className="w-1/3"></div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
