@@ -31,15 +31,40 @@ export default function AudioNotes() {
         setAudioNotes(notesData || []);
 
         if (user) {
-          const ordersQuery = query(collection(db, 'orders'), where('userId', '==', user.uid));
+          const ordersQuery = query(
+            collection(db, 'orders'), 
+            where('userId', '==', user.uid),
+            where('status', '==', 'completed')
+          );
           const ordersSnapshot = await getDocs(ordersQuery);
           const boughtIds = new Set<string>();
+          const bundleIds: string[] = [];
+
           ordersSnapshot.forEach(docSnap => {
             const orderData = docSnap.data();
             if (orderData.items) {
-              orderData.items.forEach((item: any) => boughtIds.add(item.id));
+              orderData.items.forEach((item: any) => {
+                if (item.type === 'audioNote') {
+                  boughtIds.add(item.itemId);
+                } else if (item.type === 'bundle') {
+                  bundleIds.push(item.itemId);
+                }
+              });
             }
           });
+
+          // Fetch included IDs from purchased bundles
+          if (bundleIds.length > 0) {
+            const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', bundleIds));
+            const bundlesSnapshot = await getDocs(bundlesQuery);
+            bundlesSnapshot.forEach(docSnap => {
+              const bundleData = docSnap.data();
+              if (bundleData.audioNoteIds && Array.isArray(bundleData.audioNoteIds)) {
+                bundleData.audioNoteIds.forEach((id: string) => boughtIds.add(id));
+              }
+            });
+          }
+
           setPurchasedIds(boughtIds);
         }
       } catch (error) {
@@ -179,7 +204,7 @@ export default function AudioNotes() {
           {filteredNotes.map(note => {
             const price = note.price !== undefined ? note.price : 5;
             const isPaid = price > 0;
-            const hasPurchased = purchasedIds.has(note.id);
+            const hasPurchased = purchasedIds.has(note.id) || profile?.role === 'admin';
             const canPlay = !isPaid || hasPurchased;
             
             return (

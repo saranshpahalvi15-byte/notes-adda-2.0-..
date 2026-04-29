@@ -72,18 +72,40 @@ export default function NoteDetails() {
             const ordersData = ordersSnapshot.docs.map(d => d.data());
             
             let boughtDirectly = false;
+            const bundleIds: string[] = [];
 
             ordersData.forEach((order: any) => {
               if (order.items) {
                 order.items.forEach((item: any) => {
                   if (item.itemId === id) {
                     boughtDirectly = true;
+                  } else if (item.type === 'bundle') {
+                    bundleIds.push(item.itemId);
                   }
                 });
               }
             });
 
-            setHasPurchased(boughtDirectly);
+            if (boughtDirectly || profile?.role === 'admin') {
+              setHasPurchased(true);
+            } else if (bundleIds.length > 0) {
+              // Check if any purchased bundle contains this item
+              const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', bundleIds));
+              const bundlesSnapshot = await getDocs(bundlesQuery);
+              let foundInBundle = false;
+              
+              const idField = isMindMap ? 'mindMapIds' : isMockTest ? 'mockTestIds' : 'noteIds';
+              
+              bundlesSnapshot.forEach(docSnap => {
+                const bundleData = docSnap.data();
+                if (bundleData[idField] && Array.isArray(bundleData[idField]) && bundleData[idField].includes(id)) {
+                  foundInBundle = true;
+                }
+              });
+              setHasPurchased(foundInBundle);
+            } else {
+              setHasPurchased(false);
+            }
           } catch (e: any) {
             console.error('Error fetching orders:', e);
             throw e;
