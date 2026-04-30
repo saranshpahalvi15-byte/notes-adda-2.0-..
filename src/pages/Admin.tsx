@@ -3,10 +3,11 @@ import { useNavigate, Routes, Route, Link, useLocation, useParams } from 'react-
 import { db } from '../firebase';
 import { collection, query, orderBy, getDocs, deleteDoc, doc, addDoc, updateDoc, where, getDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { Plus, Edit, Trash2, Image as ImageIcon, FileText, Package, Tag, ShoppingBag, Scissors, Mic, BrainCircuit, FileSignature } from 'lucide-react';
+import { Plus, Edit, Trash2, Image as ImageIcon, FileText, Package, Tag, ShoppingBag, Scissors, Mic, BrainCircuit, FileSignature, BookOpen, Trophy } from 'lucide-react';
 import AdminPDFSplitter from './AdminPDFSplitter';
 import { AdminMindMaps, AdminMindMapForm } from './AdminMindMaps';
 import { AdminMockTests, AdminMockTestForm } from './AdminMockTests';
+import { AdminQuizzes, AdminGiveaways } from './AdminQuizGiveaway';
 import MockTestGenerator from './MockTestGenerator';
 
 function AdminNotes() {
@@ -1247,6 +1248,12 @@ export default function Admin() {
             <Link to="/admin/pdf-splitter" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/pdf-splitter') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
               <Scissors className="w-4 h-4 mr-2" /> PDF Splitter
             </Link>
+            <Link to="/admin/quizzes" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/quizzes') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <BookOpen className="w-4 h-4 mr-2" /> Quizzes
+            </Link>
+            <Link to="/admin/giveaways" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/giveaways') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+              <Trophy className="w-4 h-4 mr-2" /> Giveaways
+            </Link>
             <Link to="/admin/orders" className={`flex items-center px-3 py-2 rounded-md text-sm font-medium ${location.pathname.includes('/admin/orders') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'}`}>
               <ShoppingBag className="w-4 h-4 mr-2" /> Purchase History
             </Link>
@@ -1276,6 +1283,8 @@ export default function Admin() {
           <Route path="audio-notes" element={<AdminAudioNotes />} />
           <Route path="audio-notes/new-audio-note" element={<AdminAudioNoteForm />} />
           <Route path="audio-notes/edit-audio-note/:id" element={<AdminAudioNoteForm />} />
+          <Route path="quizzes" element={<AdminQuizzes />} />
+          <Route path="giveaways" element={<AdminGiveaways />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="test-maker" element={<MockTestGenerator />} />
         </Routes>

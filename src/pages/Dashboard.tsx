@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
 import { forceDownload, getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
-import { Download, Copy, CheckCircle, Package, Heart, Star, Mic, BrainCircuit } from 'lucide-react';
+import { Download, Copy, CheckCircle, Package, Heart, Star, Mic, BrainCircuit, Trophy } from 'lucide-react';
 import NoteCard from '../components/NoteCard';
 import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
 
@@ -16,7 +16,8 @@ export default function Dashboard() {
   const [wishlistItems, setWishlistItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'library' | 'wishlist'>('library');
+  const [giveawayWins, setGiveawayWins] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'library' | 'wishlist' | 'prizes'>('library');
   
   // Evaluation Modal State
   const [testToEvaluate, setTestToEvaluate] = useState<any | null>(null);
@@ -29,6 +30,18 @@ export default function Dashboard() {
 
     const fetchDashboardData = async () => {
       try {
+        // Fetch Giveaway Wins
+        const giveawaysQuery = query(
+          collection(db, 'giveaways'),
+          where('winnerId', '==', user.uid)
+        );
+        const giveawaysSnapshot = await getDocs(giveawaysQuery);
+        const wins = giveawaysSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setGiveawayWins(wins);
+        if (wins.length > 0 && activeTab !== 'prizes') {
+            // Optional: suggest switching or showing a badge
+        }
+
         // Fetch Orders
         const ordersQuery = query(
           collection(db, 'orders'),
@@ -211,6 +224,22 @@ export default function Dashboard() {
             <Heart className="h-5 w-5 mr-2" />
             Wishlist
           </button>
+          {giveawayWins.length > 0 && (
+            <button
+              onClick={() => setActiveTab('prizes')}
+              className={`${
+                activeTab === 'prizes'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg flex items-center relative gap-2`}
+            >
+              <Trophy className="h-5 w-5 text-amber-500" />
+              My Prizes
+              <span className="absolute -top-1 -right-2 bg-amber-500 text-white text-[10px] h-4 w-4 rounded-full flex items-center justify-center animate-bounce font-bold">
+                {giveawayWins.length}
+              </span>
+            </button>
+          )}
         </nav>
       </div>
 
@@ -391,6 +420,55 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+          </div>
+        ) : activeTab === 'prizes' ? (
+          <div className="p-6 md:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {giveawayWins.map(win => (
+                <div key={win.id} className="relative bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-3xl p-8 overflow-hidden group shadow-sm">
+                  <div className="absolute -top-4 -right-4 h-32 w-32 bg-amber-200 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-3 bg-amber-500 rounded-2xl shadow-lg shadow-amber-200 rotate-3 group-hover:rotate-0 transition-transform">
+                        <Trophy className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-[2px] text-amber-600 block mb-0.5">Giveaway Winner</span>
+                        <h3 className="text-xl font-black text-gray-900 leading-tight">{win.title}</h3>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-600 mb-8 leading-relaxed">
+                      Amazing job! You won the giveaway for this chapter. Use the secret code below at checkout to unlock it for <span className="font-black text-amber-600">FREE</span>.
+                    </p>
+                    
+                    <div className="bg-white border-4 border-dashed border-amber-200 rounded-2xl p-6 mb-8 flex items-center justify-between shadow-inner">
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Coupon Code</span>
+                        <span className="text-2xl font-mono font-black text-indigo-600 tracking-tighter">{win.winnerCode}</span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(win.winnerCode);
+                          alert("Code copied!");
+                        }}
+                        className="bg-amber-100 text-amber-700 p-3 rounded-xl hover:bg-amber-200 transition-colors shadow-sm"
+                        title="Copy Code"
+                      >
+                        <Copy className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <button 
+                      onClick={() => navigate(`/notes/${win.noteId}`)}
+                      className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all shadow-lg hover:shadow-xl active:scale-95"
+                    >
+                      Redeem on Chapter Page
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc, limit } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
 import { forceDownload, getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
-import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic, Volume2, VolumeX, Pause, Play } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic, Volume2, VolumeX, Pause, Play, Gift, Trophy, ArrowRight } from 'lucide-react';
 import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
 
 export default function NoteDetails() {
@@ -32,6 +32,7 @@ export default function NoteDetails() {
   
   const [originalPrice, setOriginalPrice] = useState(0);
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [activeGiveaway, setActiveGiveaway] = useState<any>(null);
 
   useEffect(() => {
     if (note && note.price) {
@@ -65,6 +66,15 @@ export default function NoteDetails() {
         // Check if user has purchased
         if (user) {
           try {
+            // Check for giveaway winner status
+            const giveawayQ = query(
+              collection(db, 'giveaways'),
+              where('noteId', '==', id),
+              where('winnerId', '==', user.uid)
+            );
+            const winnerSnap = await getDocs(giveawayQ);
+            const isWinner = !winnerSnap.empty;
+
             const ordersQuery = query(
               collection(db, 'orders'),
               where('userId', '==', user.uid),
@@ -88,7 +98,7 @@ export default function NoteDetails() {
               }
             });
 
-            if (boughtDirectly || profile?.role === 'admin') {
+            if (boughtDirectly || profile?.role === 'admin' || isWinner) {
               setHasPurchased(true);
             } else if (bundleIds.length > 0) {
               // Check if any purchased bundle contains this item (chunked because 'in' query limit is 10)
@@ -131,6 +141,22 @@ export default function NoteDetails() {
     };
 
     fetchNoteAndReviews();
+
+    // Fetch active giveaway for this note
+    const fetchGiveaway = async () => {
+      if (!id) return;
+      const giveawayQ = query(
+        collection(db, 'giveaways'), 
+        where('noteId', '==', id), 
+        where('isActive', '==', true),
+        limit(1)
+      );
+      const snap = await getDocs(giveawayQ);
+      if (!snap.empty) {
+        setActiveGiveaway({ id: snap.docs[0].id, ...snap.docs[0].data() });
+      }
+    };
+    fetchGiveaway();
   }, [id, user]);
 
   const handleBuy = () => {
@@ -271,6 +297,23 @@ export default function NoteDetails() {
             <div className="prose prose-indigo text-gray-600 mb-8 flex-1">
               <p>{note.description}</p>
             </div>
+
+            {/* Giveaway Advertisement */}
+            {!hasPurchased && activeGiveaway && (
+              <div className="mb-8 p-4 bg-indigo-600 rounded-2xl border-4 border-indigo-100 text-white relative overflow-hidden group hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => navigate(`/quiz/${note.id}?giveawayId=${activeGiveaway.id}`)}>
+                <Gift className="absolute -bottom-4 -right-4 h-24 w-24 opacity-10 group-hover:rotate-12 transition-transform" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Trophy className="h-4 w-4 text-yellow-300" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-100">Live Giveaway</span>
+                  </div>
+                  <h3 className="text-lg font-black leading-tight mb-2">Win free access to these notes!</h3>
+                  <div className="flex items-center text-sm font-bold bg-white/20 rounded-lg px-3 py-2 w-max">
+                    Participate in Quiz <ArrowRight className="ml-2 h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 mb-8">
               <h3 className="text-lg font-bold text-gray-900 mb-4">What's included:</h3>

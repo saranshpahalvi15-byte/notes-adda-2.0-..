@@ -3,7 +3,7 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { BookOpen, LogOut, User, LayoutDashboard, Settings, Menu, X, Target } from 'lucide-react';
+import { BookOpen, LogOut, User, LayoutDashboard, Settings, Menu, X, Target, Gift } from 'lucide-react';
 import AIChatWidget from './AIChatWidget';
 import GoalSelectionModal from './GoalSelectionModal';
 
@@ -76,6 +76,10 @@ export default function Layout() {
               </Link>
               <Link to="/mockTests" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors">
                 Mock Tests
+              </Link>
+              <Link to="/giveaways" className="text-sm px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 hover:text-indigo-600 font-medium transition-colors flex items-center">
+                <Gift className="h-4 w-4 mr-1.5 text-indigo-500" />
+                Giveaways
               </Link>
             </nav>
 
@@ -170,6 +174,13 @@ export default function Layout() {
             >
               Mock Tests
             </Link>
+            <Link 
+              to="/giveaways" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-indigo-600 bg-indigo-50 font-bold"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Giveaways (Win Free Access)
+            </Link>
           </div>
         )}
       </header>
@@ -202,6 +213,7 @@ export default function Layout() {
                 <li><Link to="/mindMaps" className="text-sm text-gray-600 hover:text-indigo-600">Mind Maps</Link></li>
                 <li><Link to="/audioNotes" className="text-sm text-gray-600 hover:text-indigo-600">Audio Notes</Link></li>
                 <li><Link to="/mockTests" className="text-sm text-gray-600 hover:text-indigo-600">Mock Tests</Link></li>
+                <li><Link to="/giveaways" className="text-sm text-indigo-600 font-bold hover:text-indigo-700">Giveaways</Link></li>
                 <li><Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">My Dashboard</Link></li>
               </ul>
             </div>

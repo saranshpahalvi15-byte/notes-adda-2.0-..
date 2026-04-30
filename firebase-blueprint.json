@@ -109,9 +109,84 @@
         "code": { "type": "string" },
         "discountPercent": { "type": "number" },
         "isActive": { "type": "boolean" },
+        "isSingleUse": { "type": "boolean", "description": "If true, coupon is deactivated after one use" },
+        "userId": { "type": "string", "description": "Optional: Restricted to a specific user" },
+        "noteId": { "type": "string", "description": "Optional: Restricted to a specific note" },
+        "description": { "type": "string" },
+        "usedAt": { "type": "string", "format": "date-time" },
+        "usedBy": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["code", "discountPercent", "isActive"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A chapter-specific quiz with 20 questions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noteId": { "type": "string" },
+        "title": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswerIndex": { "type": "number" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["noteId", "title", "questions"]
+    },
+    "QuizSubmission": {
+      "title": "QuizSubmission",
+      "description": "A user's quiz attempt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "quizId": { "type": "string" },
+        "score": { "type": "number" },
+        "total": { "type": "number" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "quizId", "score", "total"]
+    },
+    "Giveaway": {
+      "title": "Giveaway",
+      "description": "A giveaway event for a specific chapter",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "noteId": { "type": "string" },
+        "title": { "type": "string" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "winnerId": { "type": "string" },
+        "winnerName": { "type": "string" },
+        "winnerCode": { "type": "string", "description": "Special code generated for the winner" },
+        "participantsCount": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["noteId", "title", "endTime", "isActive"]
+    },
+    "GiveawayEntry": {
+      "title": "GiveawayEntry",
+      "description": "An entry for a giveaway event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "giveawayId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "score": { "type": "number" },
+        "enteredAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["giveawayId", "userId", "userName", "score"]
     }
   },
   "firestore": {
@@ -120,6 +195,10 @@
     "/bundles/{bundleId}": { "schema": { "$ref": "#/entities/Bundle" }, "description": "Note bundles" },
     "/reviews/{reviewId}": { "schema": { "$ref": "#/entities/Review" }, "description": "User reviews" },
     "/orders/{orderId}": { "schema": { "$ref": "#/entities/Order" }, "description": "User orders" },
-    "/coupons/{couponId}": { "schema": { "$ref": "#/entities/Coupon" }, "description": "Discount coupons" }
+    "/coupons/{couponId}": { "schema": { "$ref": "#/entities/Coupon" }, "description": "Discount coupons" },
+    "/quizzes/{quizId}": { "schema": { "$ref": "#/entities/Quiz" }, "description": "Quizzes" },
+    "/quizSubmissions/{submissionId}": { "schema": { "$ref": "#/entities/QuizSubmission" }, "description": "Quiz submissions" },
+    "/giveaways/{giveawayId}": { "schema": { "$ref": "#/entities/Giveaway" }, "description": "Giveaways" },
+    "/giveawayEntries/{entryId}": { "schema": { "$ref": "#/entities/GiveawayEntry" }, "description": "Giveaway entries" }
   }
 }

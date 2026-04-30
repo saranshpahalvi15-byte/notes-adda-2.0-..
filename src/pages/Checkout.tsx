@@ -12,7 +12,13 @@ export default function Checkout() {
   
   const [items, setItems] = useState<any[]>(location.state?.items || []);
   const [discountCode, setDiscountCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState<{ type: 'referral' | 'coupon', value: number, code: string } | null>(null);
+  const [appliedDiscount, setAppliedDiscount] = useState<{ 
+    type: 'referral' | 'coupon', 
+    value: number, 
+    code: string,
+    id?: string,
+    isSingleUse?: boolean 
+  } | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -44,8 +50,22 @@ export default function Checkout() {
       const couponSnapshot = await getDocs(couponQuery);
       
       if (!couponSnapshot.empty) {
-        const couponData = couponSnapshot.docs[0].data();
-        setAppliedDiscount({ type: 'coupon', value: couponData.discountPercent, code: discountCode });
+        const couponDoc = couponSnapshot.docs[0];
+        const couponData = couponDoc.data();
+        
+        // If coupon is restricted to a user
+        if (couponData.userId && couponData.userId !== (user?.uid || profile?.id)) {
+          setError("This coupon is not valid for your account.");
+          return;
+        }
+
+        setAppliedDiscount({ 
+          type: 'coupon', 
+          value: couponData.discountPercent, 
+          code: discountCode,
+          id: couponDoc.id,
+          isSingleUse: couponData.isSingleUse 
+        });
         return;
       }
 
@@ -104,6 +124,15 @@ export default function Checkout() {
       };
 
       await addDoc(collection(db, 'orders'), orderData);
+      
+      // Deactivate single-use coupon if applied
+      if (appliedDiscount?.type === 'coupon' && appliedDiscount.isSingleUse && appliedDiscount.id) {
+        await updateDoc(doc(db, 'coupons', appliedDiscount.id), {
+          isActive: false,
+          usedAt: new Date().toISOString(),
+          usedBy: targetUid
+        });
+      }
       
       // Increment referralsCount for the referrer if referral discount was applied
       if (appliedDiscount?.type === 'referral') {

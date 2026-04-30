@@ -60,6 +60,22 @@ service cloud.firestore {
       return data.code is string && data.discountPercent is number;
     }
 
+    function isValidQuiz(data) {
+      return data.noteId is string && data.title is string && data.questions is list;
+    }
+
+    function isValidQuizSubmission(data) {
+      return data.userId is string && data.quizId is string && data.score is number && data.total is number;
+    }
+
+    function isValidGiveaway(data) {
+      return data.noteId is string && data.title is string && data.endTime is string && data.isActive is bool;
+    }
+
+    function isValidGiveawayEntry(data) {
+      return data.giveawayId is string && data.userId is string && data.userName is string;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -73,62 +89,90 @@ service cloud.firestore {
 
     match /notes/{noteId} {
       allow read: if true;
-      allow create: if isValidNote(request.resource.data);
-      allow update: if isValidNote(request.resource.data) || 
+      allow create: if isAdmin();
+      allow update: if isAdmin() || 
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
-      allow delete: if true;
+      allow delete: if isAdmin();
     }
 
     match /bundles/{bundleId} {
       allow read: if true;
-      allow create: if isValidBundle(request.resource.data);
-      allow update: if isValidBundle(request.resource.data) || 
+      allow create: if isAdmin();
+      allow update: if isAdmin() || 
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
-      allow delete: if true;
+      allow delete: if isAdmin();
     }
 
     match /mindMaps/{mindMapId} {
       allow read: if true;
-      allow create: if isValidNote(request.resource.data);
-      allow update: if isValidNote(request.resource.data) || 
+      allow create: if isAdmin();
+      allow update: if isAdmin() || 
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
-      allow delete: if true;
+      allow delete: if isAdmin();
     }
 
     match /mockTests/{mockTestId} {
       allow read: if true;
-      allow create: if isValidNote(request.resource.data);
-      allow update: if isValidNote(request.resource.data) || 
+      allow create: if isAdmin();
+      allow update: if isAdmin() || 
                     (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
-      allow delete: if true;
+      allow delete: if isAdmin();
     }
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isValidReview(request.resource.data);
-      allow update: if isValidReview(request.resource.data);
-      allow delete: if true;
+      allow create: if isAuthenticated() && isValidReview(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /orders/{orderId} {
-      allow read: if true;
-      allow create: if isValidOrder(request.resource.data);
-      allow update: if isValidOrder(request.resource.data);
-      allow delete: if true;
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /coupons/{couponId} {
       allow read: if true;
-      allow create: if isValidCoupon(request.resource.data);
-      allow update: if isValidCoupon(request.resource.data);
-      allow delete: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /audioNotes/{audioNoteId} {
       allow read: if true;
-      allow create: if isValidAudioNoteCreate(request.resource.data);
-      allow update: if isValidAudioNote(request.resource.data);
-      allow delete: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidQuiz(request.resource.data);
+      allow update: if isAdmin() && isValidQuiz(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /quizSubmissions/{submissionId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidQuizSubmission(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /giveaways/{giveawayId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidGiveaway(request.resource.data);
+      allow update: if isAdmin() && isValidGiveaway(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /giveawayEntries/{entryId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidGiveawayEntry(request.resource.data) && isOwner(request.resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

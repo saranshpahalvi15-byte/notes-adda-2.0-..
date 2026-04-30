@@ -26,6 +26,8 @@ import Privacy from './pages/Privacy';
 import Refund from './pages/Refund';
 import AudioNotes from './pages/AudioNotes';
 import MockTestGenerator from './pages/MockTestGenerator';
+import Giveaways from './pages/Giveaways';
+import Quiz from './pages/Quiz';
 
 export default function App() {
   const { setUser, setProfile, setLoading } = useAuthStore();
@@ -98,6 +100,8 @@ export default function App() {
           <Route path="mockTests" element={<MockTests />} />
           <Route path="mockTests/:id" element={<NoteDetails />} />
           <Route path="audioNotes" element={<AudioNotes />} />
+          <Route path="giveaways" element={<Giveaways />} />
+          <Route path="quiz/:noteId" element={<Quiz />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="terms" element={<Terms />} />
