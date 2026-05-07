@@ -20,6 +20,15 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Explicitly serve ads.txt to ensure bots can find it
+app.get('/ads.txt', (req, res) => {
+  const isProd = process.env.NODE_ENV === "production";
+  const filePath = isProd 
+    ? path.join(process.cwd(), 'dist', 'ads.txt')
+    : path.join(process.cwd(), 'public', 'ads.txt');
+  res.sendFile(filePath);
+});
+
 app.get("/api/debug-env", (req, res) => {
   res.json({ 
     hasKey: !!apiKey,
