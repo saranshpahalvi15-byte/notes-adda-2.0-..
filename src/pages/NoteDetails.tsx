@@ -3,8 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc, limit } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { forceDownload, getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
-import { ShoppingCart, CheckCircle, Star, BookOpen, Download, X, Mic, Volume2, VolumeX, Pause, Play, Gift, Trophy, ArrowRight } from 'lucide-react';
+import { getDrivePreviewUrl, getDirectDownloadUrl } from '../lib/driveUtils';
+import { ShoppingCart, CheckCircle, Star, BookOpen, X, Mic, Volume2, VolumeX, Pause, Play, Gift, Trophy, ArrowRight } from 'lucide-react';
 import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
 
 export default function NoteDetails() {
@@ -16,7 +16,7 @@ export default function NoteDetails() {
   const [isReading, setIsReading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, setProfile } = useAuthStore();
+  const { user, profile, setProfile, setNotification } = useAuthStore();
   
   const isMindMap = location.pathname.includes('/mindMaps/');
   const isMockTest = location.pathname.includes('/mockTests/');
@@ -27,7 +27,6 @@ export default function NoteDetails() {
   const [comment, setComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
   
   const [originalPrice, setOriginalPrice] = useState(0);
@@ -159,21 +158,25 @@ export default function NoteDetails() {
     fetchGiveaway();
   }, [id, user]);
 
+  useEffect(() => {
+    if (location.state?.autoRead && hasPurchased && note) {
+      if (isMockTest) {
+        setIsEvaluationOpen(true);
+      } else {
+        setIsReading(true);
+      }
+      // Clear location state to prevent re-opening on back/refresh if possible
+      // (Navigate to same path without state)
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [hasPurchased, note, location.state, location.pathname, isMockTest, navigate]);
+
   const handleBuy = () => {
     if (!user) {
       navigate('/login');
       return;
     }
     navigate('/checkout', { state: { items: [{ ...note, type: isMindMap ? 'mindMap' : isMockTest ? 'mockTest' : 'note' }] } });
-  };
-
-  const handleDownload = async () => {
-    if (!user || !profile || !id) return;
-
-    if (hasPurchased) {
-      forceDownload(note.pdfUrl, `${note.title || 'Note'}.pdf`);
-      return;
-    }
   };
 
   const submitReview = async (e: React.FormEvent) => {
@@ -208,10 +211,10 @@ export default function NoteDetails() {
       setNote({ ...note, rating: newRating, reviewCount: newReviewCount });
       setComment('');
       setRating(5);
-      alert("Review submitted successfully!");
+      setNotification({ message: 'Review submitted successfully!', type: 'success' });
     } catch (error) {
       console.error("Error submitting review:", error);
-      alert("Failed to submit review");
+      setNotification({ message: 'Failed to submit review', type: 'error' });
     } finally {
       setIsSubmittingReview(false);
     }
@@ -324,10 +327,6 @@ export default function NoteDetails() {
                 </li>
                 <li className="flex items-center text-gray-700">
                   <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-                  Instant download after purchase
-                </li>
-                <li className="flex items-center text-gray-700">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
                   Lifetime access
                 </li>
               </ul>
@@ -390,14 +389,6 @@ export default function NoteDetails() {
                   >
                     <BookOpen className="h-5 w-5 mr-2" />
                     {isMockTest ? 'Get your answers evaluated by experts' : 'Read Notes'}
-                  </button>
-                  <button 
-                    onClick={handleDownload}
-                    disabled={downloading}
-                    className="flex items-center justify-center px-6 py-3 border border-transparent text-lg font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    {downloading ? 'Processing...' : 'Download PDF'}
                   </button>
                 </div>
               ) : (

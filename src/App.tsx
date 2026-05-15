@@ -54,11 +54,49 @@ export default function App() {
           doc(db, 'users', firebaseUser.uid),
           (userDoc) => {
             if (userDoc.exists()) {
-              const data = userDoc.data();
+              const data = userDoc.data() as any;
+              
+              // Handle role update
               if ((firebaseUser.email === 'masteradmin@vidyanotes.com' || firebaseUser.email === 'saransh1860@gmail.com') && data.role !== 'admin') {
                 updateDoc(doc(db, 'users', firebaseUser.uid), { role: 'admin' });
                 data.role = 'admin';
               }
+
+              // Handle Streak Day-Reset Logic
+              const today = new Date().toISOString().split('T')[0];
+              const lastActivity = data.lastActivityDate;
+              let newStreak = data.streakCount || 0;
+              let timeConsumed = data.timeSpentToday || 0;
+              let incremented = data.streakIncrementedToday || false;
+
+              if (lastActivity !== today) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+                if (lastActivity !== yesterdayStr && lastActivity) {
+                  // Missed a day, reset streak
+                  newStreak = 0;
+                }
+                
+                // New day started, reset today's stats
+                timeConsumed = 0;
+                incremented = false;
+
+                // Update firestore for new day
+                updateDoc(doc(db, 'users', firebaseUser.uid), {
+                  lastActivityDate: today,
+                  timeSpentToday: 0,
+                  streakIncrementedToday: false,
+                  streakCount: newStreak
+                });
+                
+                data.lastActivityDate = today;
+                data.timeSpentToday = 0;
+                data.streakIncrementedToday = false;
+                data.streakCount = newStreak;
+              }
+
               setProfile({ id: userDoc.id, ...data } as any);
             } else {
               setProfile(null);

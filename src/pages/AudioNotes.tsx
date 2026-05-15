@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
 import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
-import { getDirectDownloadUrl, getDrivePreviewUrl } from '../lib/downloadUtils';
+import { getDrivePreviewUrl, getDirectDownloadUrl } from '../lib/driveUtils';
 import { Mic, Play, X, Pause, Volume2, VolumeX, Lock, ShoppingCart } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNavigate } from 'react-router-dom';

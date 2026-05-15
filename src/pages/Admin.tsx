@@ -534,7 +534,7 @@ function AdminNoteForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">PDF Download Link (e.g., Google Drive)</label>
+            <label className="block text-sm font-medium text-gray-700">PDF Access Link (e.g., Google Drive)</label>
             <input 
               type="url" 
               required 

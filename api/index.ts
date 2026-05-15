@@ -41,7 +41,7 @@ app.get("/api/debug-env", (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages, image } = req.body;
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "Messages array is required" });
     }
@@ -54,10 +54,25 @@ app.post("/api/chat", async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const contents = messages.map((msg: any) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }]
-    }));
+    // Create gemini contents
+    const contents = messages.map((msg: any, idx: number) => {
+      const parts: any[] = [{ text: msg.text }];
+      
+      // If it's the last user message and there's an image, attach it
+      if (idx === messages.length - 1 && msg.role === 'user' && image) {
+        parts.unshift({
+          inlineData: {
+            mimeType: image.mimeType || 'image/jpeg',
+            data: image.data // base64 string
+          }
+        });
+      }
+      
+      return {
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: parts
+      };
+    });
 
     const systemInstruction = `You are an elite, highly capable AI Tutor and Academic Assistant for 'Notes Adda', a premium digital marketplace for student notes (Classes 9-12 in India). 
 Your capabilities:
@@ -204,8 +219,8 @@ app.post("/api/send-receipt", async (req, res) => {
         <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px;">
           <h3 style="margin-top: 0; color: #111827;">${item.title}</h3>
           <p style="color: #4b5563; margin-bottom: 15px;">Price: ₹${item.price}</p>
-          ${downloadUrl 
-            ? `<a href="${downloadUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">Download PDF</a>`
+          ${item.pdfUrl 
+            ? `<a href="${item.pdfUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;">View PDF Online</a>`
             : `<p style="color: #4b5563; font-style: italic;">Please visit your dashboard to view the contents of this bundle.</p>`
           }
         </div>
@@ -213,13 +228,13 @@ app.post("/api/send-receipt", async (req, res) => {
     }).join('');
 
     const info = await transporter.sendMail({
-      from: '"NotesAdda" <saransh1860@gmail.com>',
+      from: '"VidyaNotes" <saransh1860@gmail.com>',
       to: email,
-      subject: "Your NotesAdda Purchase Receipt & Downloads",
+      subject: "Your VidyaNotes Purchase Receipt & Access",
       html: `
         <div style="font-family: Arial, sans-serif; max-w-2xl; margin: 0 auto; padding: 20px;">
           <h1 style="color: #4f46e5;">Thank you for your purchase, ${name || 'Student'}!</h1>
-          <p style="color: #374151; font-size: 16px;">Your payment of <strong>₹${total}</strong> was successful. You can download your purchased notes below:</p>
+          <p style="color: #374151; font-size: 16px;">Your payment of <strong>₹${total}</strong> was successful. You can access your purchased notes below:</p>
           
           <div style="margin-top: 30px;">
             ${itemsHtml}

@@ -290,20 +290,11 @@ Format the output clearly in Markdown. Ensure the questions are accurate and dir
               </h2>
               <div className="flex gap-4">
                 <button
-                  onClick={handleDownload}
-                  disabled={isDownloading}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 flex items-center"
-                >
-                  {isDownloading ? (
-                    <><Loader2 className="animate-spin h-4 w-4 mr-2" /> Generating...</>
-                  ) : 'Download PDFs'}
-                </button>
-                <button
                   onClick={() => {
                     setResult(null);
                     setFile(null);
                   }}
-                  className="text-indigo-600 hover:text-indigo-800 font-medium text-sm"
+                  className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium text-sm hover:bg-indigo-700 transition-all flex items-center"
                 >
                   Generate Another Test
                 </button>

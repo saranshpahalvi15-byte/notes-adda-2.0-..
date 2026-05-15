@@ -47,17 +47,17 @@ export default function Notes() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Chapter Notes</h1>
-        <p className="text-gray-500 mt-2">Browse our collection of premium handwritten and printed notes.</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Chapter Notes</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">Browse our collection of premium handwritten and printed notes.</p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <div className="flex flex-col sm:flex-row gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
           <select
             value={filterSubject}
             onChange={(e) => setFilterSubject(e.target.value)}
-            className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            className="w-full border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           >
             <option value="all">All Subjects</option>
             {subjects.map(sub => (
@@ -87,8 +87,8 @@ export default function Notes() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-          <p className="text-gray-500">No notes found matching your filters.</p>
+        <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+          <p className="text-gray-500 dark:text-gray-400">No notes found matching your filters.</p>
         </div>
       )}
     </div>

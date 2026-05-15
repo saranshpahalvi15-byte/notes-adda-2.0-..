@@ -325,7 +325,7 @@ export function AdminMockTestForm() {
             <input type="number" required min="1" value={formData.maxMarks} onChange={e => setFormData({...formData, maxMarks: Number(e.target.value)})} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">PDF Download Link (e.g., Google Drive)</label>
+            <label className="block text-sm font-medium text-gray-700">PDF Access Link (e.g., Google Drive)</label>
             <input 
               type="url" 
               required 

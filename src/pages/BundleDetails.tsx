@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
-import { forceDownload } from '../lib/downloadUtils';
-import { ShoppingCart, CheckCircle, Layers, Download, Star } from 'lucide-react';
+import { getDrivePreviewUrl } from '../lib/driveUtils';
+import { ShoppingCart, CheckCircle, Layers, Star, BookOpen, Mic, BrainCircuit } from 'lucide-react';
+import { usePurchasedItems } from '../hooks/usePurchasedItems';
 
 export default function BundleDetails() {
   const { id } = useParams<{ id: string }>();
@@ -18,7 +19,8 @@ export default function BundleDetails() {
   const [activeImage, setActiveImage] = useState(0);
   const [hasPurchased, setHasPurchased] = useState(false);
   const navigate = useNavigate();
-  const { user, profile } = useAuthStore();
+  const { user, profile, setNotification } = useAuthStore();
+  const { purchasedIds } = usePurchasedItems();
 
   // Review form state
   const [rating, setRating] = useState(5);
@@ -74,10 +76,10 @@ export default function BundleDetails() {
       setBundle({ ...bundle, rating: newRating, reviewCount: newReviewCount });
       setComment('');
       setRating(5);
-      alert("Review submitted successfully!");
+      setNotification({ message: 'Review submitted successfully!', type: 'success' });
     } catch (error) {
       console.error("Error submitting review:", error);
-      alert("Failed to submit review");
+      setNotification({ message: 'Failed to submit review', type: 'error' });
     } finally {
       setIsSubmittingReview(false);
     }
@@ -305,31 +307,79 @@ export default function BundleDetails() {
             <h3 className="text-lg font-bold text-gray-900 mb-4">Included Items ({includedNotes.length + includedMindMaps.length + includedAudioNotes.length + includedMockTests.length}):</h3>
             <ul className="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
               {includedNotes.map(note => (
-                <li key={`note-${note.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="font-medium text-indigo-700 w-24 flex-shrink-0">Note:</span>
-                  <span className="font-medium">{note.title}</span>
+                <li key={`note-${note.id}`} className="flex items-center justify-between text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-xs text-indigo-700 uppercase tracking-wider">Note</span>
+                      <span className="font-medium">{note.title}</span>
+                    </div>
+                  </div>
+                  {(hasPurchased || purchasedIds.has(note.id) || profile?.role === 'admin') && (
+                    <button 
+                      onClick={() => navigate(`/notes/${note.id}`, { state: { autoRead: true } })}
+                      className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-100 transition-colors"
+                    >
+                      Read
+                    </button>
+                  )}
                 </li>
               ))}
               {includedMindMaps.map(item => (
-                <li key={`mindmap-${item.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="font-medium text-pink-600 w-24 flex-shrink-0">Mind Map:</span>
-                  <span className="font-medium">{item.title}</span>
+                <li key={`mindmap-${item.id}`} className="flex items-center justify-between text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-xs text-pink-600 uppercase tracking-wider">Mind Map</span>
+                      <span className="font-medium">{item.title}</span>
+                    </div>
+                  </div>
+                  {(hasPurchased || purchasedIds.has(item.id) || profile?.role === 'admin') && (
+                    <button 
+                      onClick={() => navigate(`/mindMaps/${item.id}`, { state: { autoRead: true } })}
+                      className="text-xs bg-pink-50 text-pink-600 px-3 py-1.5 rounded-lg font-bold hover:bg-pink-100 transition-colors"
+                    >
+                      View
+                    </button>
+                  )}
                 </li>
               ))}
               {includedAudioNotes.map(item => (
-                <li key={`audio-${item.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="font-medium text-amber-600 w-24 flex-shrink-0">Audio Note:</span>
-                  <span className="font-medium">{item.title}</span>
+                <li key={`audio-${item.id}`} className="flex items-center justify-between text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-xs text-amber-600 uppercase tracking-wider">Audio Explanation</span>
+                      <span className="font-medium">{item.title}</span>
+                    </div>
+                  </div>
+                  {(hasPurchased || purchasedIds.has(item.id) || profile?.role === 'admin') && (
+                    <button 
+                      onClick={() => navigate(`/audioNotes`)}
+                      className="text-xs bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg font-bold hover:bg-amber-100 transition-colors"
+                    >
+                      Listen
+                    </button>
+                  )}
                 </li>
               ))}
               {includedMockTests.map(item => (
-                <li key={`mocktest-${item.id}`} className="flex items-start text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
-                  <span className="font-medium text-purple-600 w-24 flex-shrink-0">Mock Test:</span>
-                  <span className="font-medium">{item.title}</span>
+                <li key={`mocktest-${item.id}`} className="flex items-center justify-between text-gray-700 bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0 mt-0.5" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-xs text-purple-600 uppercase tracking-wider">Mock Test</span>
+                      <span className="font-medium">{item.title}</span>
+                    </div>
+                  </div>
+                  {(hasPurchased || purchasedIds.has(item.id) || profile?.role === 'admin') && (
+                    <button 
+                      onClick={() => navigate(`/mockTests/${item.id}`, { state: { autoRead: true } })}
+                      className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold hover:bg-purple-100 transition-colors"
+                    >
+                      Take Test
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -356,15 +406,6 @@ export default function BundleDetails() {
                   <CheckCircle className="h-5 w-5 mr-2" />
                   Purchased
                 </div>
-                {bundle.pdfUrl && (
-                  <button
-                    onClick={() => forceDownload(bundle.pdfUrl, `${bundle.title || 'Bundle'}.pdf`)}
-                    className="flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all cursor-pointer"
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    Download Bundle PDF
-                  </button>
-                )}
               </div>
             ) : (
               <button

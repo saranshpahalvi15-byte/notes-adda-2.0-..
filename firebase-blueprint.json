@@ -12,9 +12,10 @@
         "referralCode": { "type": "string" },
         "referredBy": { "type": "string" },
         "wishlist": { "type": "array", "items": { "type": "string" } },
-        "downloadCredits": { "type": "number", "description": "Number of remaining download credits for subscribers" },
-        "creditsResetDate": { "type": "string", "format": "date-time", "description": "Date when download credits reset" },
-        "downloadedNotes": { "type": "array", "items": { "type": "string" }, "description": "List of note IDs downloaded using credits" },
+        "streakCount": { "type": "number" },
+        "lastActivityDate": { "type": "string" },
+        "timeSpentToday": { "type": "number", "description": "Seconds spent studying today" },
+        "streakIncrementedToday": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "email", "name", "role", "referralCode"]
