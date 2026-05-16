@@ -4,8 +4,11 @@ import { db } from '../firebase';
 import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc, limit } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
 import { getDrivePreviewUrl, getDirectDownloadUrl } from '../lib/driveUtils';
-import { ShoppingCart, CheckCircle, Star, BookOpen, X, Mic, Volume2, VolumeX, Pause, Play, Gift, Trophy, ArrowRight } from 'lucide-react';
+import { ShoppingCart, CheckCircle, Star, BookOpen, X, Mic, Volume2, VolumeX, Pause, Play, Gift, Trophy, ArrowRight, TrendingUp } from 'lucide-react';
 import MockTestEvaluationModal from '../components/MockTestEvaluationModal';
+import { usePurchased } from '../hooks/usePurchasedItems';
+import ProtectedViewer from '../components/ProtectedViewer';
+import NoteCard from '../components/NoteCard';
 
 export default function NoteDetails() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +20,7 @@ export default function NoteDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile, setProfile, setNotification } = useAuthStore();
+  const { purchasedIds } = usePurchased();
   
   const isMindMap = location.pathname.includes('/mindMaps/');
   const isMockTest = location.pathname.includes('/mockTests/');
@@ -26,12 +30,14 @@ export default function NoteDetails() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [hasPurchased, setHasPurchased] = useState(false);
+  const isPurchasedGlobally = (id && purchasedIds.has(id)) || profile?.role === 'admin';
   const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
   
   const [originalPrice, setOriginalPrice] = useState(0);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [activeGiveaway, setActiveGiveaway] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   useEffect(() => {
     if (note && note.price) {
@@ -61,77 +67,6 @@ export default function NoteDetails() {
         const reviewsQuery = query(collection(db, 'reviews'), where('noteId', '==', id));
         const reviewsSnapshot = await getDocs(reviewsQuery);
         setReviews(reviewsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-
-        // Check if user has purchased
-        if (user) {
-          try {
-            // Check for giveaway winner status
-            const giveawayQ = query(
-              collection(db, 'giveaways'),
-              where('noteId', '==', id),
-              where('winnerId', '==', user.uid)
-            );
-            const winnerSnap = await getDocs(giveawayQ);
-            const isWinner = !winnerSnap.empty;
-
-            const ordersQuery = query(
-              collection(db, 'orders'),
-              where('userId', '==', user.uid),
-              where('status', '==', 'completed')
-            );
-            const ordersSnapshot = await getDocs(ordersQuery);
-            const ordersData = ordersSnapshot.docs.map(d => d.data());
-            
-            let boughtDirectly = false;
-            const bundleIds: string[] = [];
-
-            ordersData.forEach((order: any) => {
-              if (order.items) {
-                order.items.forEach((item: any) => {
-                  if (item.itemId === id) {
-                    boughtDirectly = true;
-                  } else if (item.type === 'bundle') {
-                    bundleIds.push(item.itemId);
-                  }
-                });
-              }
-            });
-
-            if (boughtDirectly || profile?.role === 'admin' || isWinner) {
-              setHasPurchased(true);
-            } else if (bundleIds.length > 0) {
-              // Check if any purchased bundle contains this item (chunked because 'in' query limit is 10)
-              let foundInBundle = false;
-              const chunks = [];
-              for (let i = 0; i < bundleIds.length; i += 10) {
-                chunks.push(bundleIds.slice(i, i + 10));
-              }
-
-              for (const chunk of chunks) {
-                if (foundInBundle) break;
-                
-                const bundlesQuery = query(collection(db, 'bundles'), where('__name__', 'in', chunk));
-                const bundlesSnapshot = await getDocs(bundlesQuery);
-                
-                const idField = isMindMap ? 'mindMapIds' : isMockTest ? 'mockTestIds' : 'noteIds';
-                
-                bundlesSnapshot.forEach(docSnap => {
-                  const bundleData = docSnap.data();
-                  if (bundleData[idField] && Array.isArray(bundleData[idField]) && bundleData[idField].includes(id)) {
-                    foundInBundle = true;
-                  }
-                });
-              }
-              setHasPurchased(foundInBundle);
-            } else {
-              setHasPurchased(false);
-            }
-          } catch (e: any) {
-            console.error('Error fetching orders:', e);
-            throw e;
-          }
-        }
-
       } catch (error) {
         console.error("Error fetching note:", error);
       } finally {
@@ -140,6 +75,34 @@ export default function NoteDetails() {
     };
 
     fetchNoteAndReviews();
+
+    // Fetch recommendations
+    const fetchRecommendations = async () => {
+      if (!id) return;
+      setLoadingRecommendations(true);
+      try {
+        // Find notes of same subject or class
+        const q = query(
+          collection(db, 'notes'),
+          where('subject', '==', note?.subject || ''),
+          limit(5)
+        );
+        const snap = await getDocs(q);
+        const recs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(item => item.id !== id)
+          .slice(0, 4);
+        setRecommendations(recs);
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    if (note && note.subject) {
+      fetchRecommendations();
+    }
 
     // Fetch active giveaway for this note
     const fetchGiveaway = async () => {
@@ -159,7 +122,7 @@ export default function NoteDetails() {
   }, [id, user]);
 
   useEffect(() => {
-    if (location.state?.autoRead && hasPurchased && note) {
+    if (location.state?.autoRead && isPurchasedGlobally && note) {
       if (isMockTest) {
         setIsEvaluationOpen(true);
       } else {
@@ -169,7 +132,7 @@ export default function NoteDetails() {
       // (Navigate to same path without state)
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [hasPurchased, note, location.state, location.pathname, isMockTest, navigate]);
+  }, [isPurchasedGlobally, note, location.state, location.pathname, isMockTest, navigate]);
 
   const handleBuy = () => {
     if (!user) {
@@ -302,7 +265,7 @@ export default function NoteDetails() {
             </div>
 
             {/* Giveaway Advertisement */}
-            {!hasPurchased && activeGiveaway && (
+            {!isPurchasedGlobally && activeGiveaway && (
               <div className="mb-8 p-4 bg-indigo-600 rounded-2xl border-4 border-indigo-100 text-white relative overflow-hidden group hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => navigate(`/quiz/${note.id}?giveawayId=${activeGiveaway.id}`)}>
                 <Gift className="absolute -bottom-4 -right-4 h-24 w-24 opacity-10 group-hover:rotate-12 transition-transform" />
                 <div className="relative z-10">
@@ -333,7 +296,7 @@ export default function NoteDetails() {
             </div>
 
             {/* Audio Note section */}
-            {hasPurchased && note.audioNoteUrl && (
+            {isPurchasedGlobally && note.audioNoteUrl && (
               <div className="mb-8 bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
                 <div className="flex items-center mb-4">
                   <div className="bg-indigo-600 p-2 rounded-lg mr-3">
@@ -381,7 +344,7 @@ export default function NoteDetails() {
                   )}
                 </div>
               </div>
-              {hasPurchased ? (
+              {isPurchasedGlobally ? (
                 <div className="flex gap-4">
                   <button 
                     onClick={() => isMockTest ? setIsEvaluationOpen(true) : setIsReading(true)}
@@ -412,7 +375,7 @@ export default function NoteDetails() {
           Student Reviews
         </h2>
 
-        {hasPurchased && (
+        {isPurchasedGlobally && (
           <form onSubmit={submitReview} className="mb-10 bg-gray-50 p-6 rounded-2xl border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Write a Review</h3>
             <div className="mb-4">
@@ -490,15 +453,48 @@ export default function NoteDetails() {
               </button>
             </div>
             <div className="flex-1 w-full h-full bg-gray-100 relative overflow-hidden">
-              {/* Shift iframe up by 56px to hide the Google Drive top toolbar which contains the pop-out button */}
-              <iframe 
-                src={getDrivePreviewUrl(note.pdfUrl)} 
-                className="absolute left-0 w-full border-0"
-                style={{ top: '-56px', height: 'calc(100% + 56px)' }}
-                allow="autoplay"
-                title="PDF Reader"
-              ></iframe>
+              <ProtectedViewer isActive={true} title={note.title}>
+                {/* Shift iframe up by 56px to hide the Google Drive top toolbar which contains the pop-out button */}
+                <iframe 
+                  src={getDrivePreviewUrl(note.pdfUrl)} 
+                  className="absolute left-0 w-full border-0"
+                  style={{ top: '-56px', height: 'calc(100% + 56px)' }}
+                  allow="autoplay"
+                  title="PDF Reader"
+                ></iframe>
+              </ProtectedViewer>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations Section */}
+      {recommendations.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mt-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <TrendingUp className="h-6 w-6 text-indigo-600 mr-2" />
+              Students also viewed
+            </h2>
+            <div className="h-1 flex-1 bg-gray-100 mx-6 rounded-full hidden sm:block"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recommendations.map((rec) => (
+              <NoteCard
+                key={rec.id}
+                id={rec.id}
+                title={rec.title}
+                subject={rec.subject}
+                classLevel={rec.classLevel}
+                price={rec.price}
+                discountPercent={rec.discountPercent}
+                previewImage={rec.previewImages?.[0]}
+                type="note"
+                rating={rec.rating}
+                reviewCount={rec.reviewCount}
+              />
+            ))}
           </div>
         </div>
       )}

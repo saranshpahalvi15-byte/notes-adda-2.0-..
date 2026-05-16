@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Award, Zap, ArrowRight, Star } from 'lucide-react';
 import { db } from '../firebase';
-import { collection, query, limit, getDocs } from 'firebase/firestore';
+import { collection, query, limit, getDocs, where } from 'firebase/firestore';
 import NoteCard from '../components/NoteCard';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -14,33 +14,15 @@ export default function Home() {
   useEffect(() => {
     const fetchBestSellers = async () => {
       try {
-        const bundlesQuery = query(collection(db, 'bundles'), limit(4));
+        let bundlesQuery = query(collection(db, 'bundles'), limit(4));
+        if (profile?.classLevel) {
+          bundlesQuery = query(collection(db, 'bundles'), where('classLevel', '==', profile.classLevel), limit(4));
+        }
+        
         const bundlesSnapshot = await getDocs(bundlesQuery);
         const bundlesData = bundlesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Backfill preview images for older bundles from notes
-        const notesSnapshot = await getDocs(collection(db, 'notes'));
-        const allNotes = notesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
-
-        let enrichedBundles = bundlesData.map((bundle: any) => {
-          if (!bundle.previewImages || bundle.previewImages.length === 0) {
-            const matchingNote = allNotes.find(n => 
-              n.classLevel === bundle.classLevel && 
-              n.subject && bundle.subject && 
-              n.subject.toLowerCase() === bundle.subject.toLowerCase() && 
-              n.previewImages && 
-              n.previewImages.length > 0
-            );
-            if (matchingNote) {
-              bundle.previewImages = matchingNote.previewImages;
-            }
-          }
-          return bundle;
-        });
-
-        if (profile?.classLevel) {
-          enrichedBundles = enrichedBundles.filter(bundle => bundle.classLevel === profile.classLevel);
-        }
+        const enrichedBundles = bundlesData;
 
         setBestSellerBundles(enrichedBundles);
       } catch (error) {
@@ -51,7 +33,7 @@ export default function Home() {
     };
 
     fetchBestSellers();
-  }, []);
+  }, [profile?.classLevel]);
 
   return (
     <div className="flex flex-col items-center">

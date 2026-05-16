@@ -4,7 +4,7 @@ import { Heart, Star, BookOpen } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { usePurchasedItems } from '../hooks/usePurchasedItems';
+import { usePurchased } from '../hooks/usePurchasedItems';
 
 interface NoteCardProps {
   id: string;
@@ -22,7 +22,7 @@ interface NoteCardProps {
 
 const NoteCard: React.FC<NoteCardProps> = ({ id, title, subject, classLevel, price, discountPercent: itemDiscountPercent, previewImage, type, isFeatured, rating, reviewCount }) => {
   const { user, profile, setProfile } = useAuthStore();
-  const { purchasedIds } = usePurchasedItems();
+  const { purchasedIds } = usePurchased();
   const navigate = useNavigate();
   
   const isWishlisted = profile?.wishlist?.includes(id) || false;

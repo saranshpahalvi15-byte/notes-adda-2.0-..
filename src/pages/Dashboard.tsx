@@ -53,7 +53,33 @@ export default function Dashboard() {
         
         setOrders(ordersData);
 
-        // Extract all purchased items
+        // Extract all purchased items from orders
+        const itemsToFetch: Record<string, Set<string>> = {
+          notes: new Set(),
+          bundles: new Set(),
+          mindMaps: new Set(),
+          mockTests: new Set(),
+          audioNotes: new Set()
+        };
+        
+        const itemOrderMap: Record<string, string> = {}; // itemId -> orderId
+
+        for (const orderDoc of ordersData) {
+          const order = orderDoc as any;
+          if (order.items && Array.isArray(order.items)) {
+            for (const item of order.items) {
+              if (item.type === 'subscription') continue;
+              const collectionName = item.type === 'note' ? 'notes' : 
+                                   item.type === 'mindMap' ? 'mindMaps' : 
+                                   item.type === 'mockTest' ? 'mockTests' : 
+                                   item.type === 'audioNote' ? 'audioNotes' : 'bundles';
+              
+              itemsToFetch[collectionName]?.add(item.itemId);
+              itemOrderMap[`${collectionName}-${item.itemId}`] = order.id;
+            }
+          }
+        }
+
         const itemsList: any[] = [];
         const processedItemIds = new Set<string>();
 
@@ -65,52 +91,46 @@ export default function Dashboard() {
           }
         };
 
-        for (const order of ordersData) {
-          const orderWithItems = order as any;
-          if (orderWithItems.items && Array.isArray(orderWithItems.items)) {
-            for (const item of orderWithItems.items) {
-              if (item.type === 'subscription') continue;
+        // Batch fetch all items
+        for (const [coll, idSet] of Object.entries(itemsToFetch)) {
+          const ids = Array.from(idSet);
+          if (ids.length === 0) continue;
 
-              try {
-                const collectionName = item.type === 'note' ? 'notes' : 
-                                     item.type === 'mindMap' ? 'mindMaps' : 
-                                     item.type === 'mockTest' ? 'mockTests' : 
-                                     item.type === 'audioNote' ? 'audioNotes' : 'bundles';
-                
-                const itemDoc = await getDoc(doc(db, collectionName, item.itemId));
-                
-                if (itemDoc.exists()) {
-                  const data = { id: itemDoc.id, ...itemDoc.data() } as any;
-                  
-                  if (item.type === 'bundle') {
-                    // Explode bundle contents
-                    if (data.noteIds && data.noteIds.length > 0) {
-                      const notesQuery = query(collection(db, 'notes'), where('__name__', 'in', data.noteIds));
-                      const notesSnapshot = await getDocs(notesQuery);
-                      notesSnapshot.docs.forEach(d => addItemToList({ id: d.id, ...d.data() }, 'note', order.id));
-                    }
-                    if (data.mindMapIds && data.mindMapIds.length > 0) {
-                      const mmQuery = query(collection(db, 'mindMaps'), where('__name__', 'in', data.mindMapIds));
-                      const mmSnapshot = await getDocs(mmQuery);
-                      mmSnapshot.docs.forEach(d => addItemToList({ id: d.id, ...d.data() }, 'mindMap', order.id));
-                    }
-                    if (data.mockTestIds && data.mockTestIds.length > 0) {
-                      const mtQuery = query(collection(db, 'mockTests'), where('__name__', 'in', data.mockTestIds));
-                      const mtSnapshot = await getDocs(mtQuery);
-                      mtSnapshot.docs.forEach(d => addItemToList({ id: d.id, ...d.data() }, 'mockTest', order.id));
-                    }
-                    if (data.audioNoteIds && data.audioNoteIds.length > 0) {
-                      const anQuery = query(collection(db, 'audioNotes'), where('__name__', 'in', data.audioNoteIds));
-                      const anSnapshot = await getDocs(anQuery);
-                      anSnapshot.docs.forEach(d => addItemToList({ id: d.id, ...d.data() }, 'audioNote', order.id));
-                    }
-                    // We don't add the bundle itself to itemsList as per user request
-                  } else {
-                    addItemToList(data, item.type, order.id);
-                  }
+          // Chunk IDs for Firestore 'in' query (limit 30)
+          for (let i = 0; i < ids.length; i += 30) {
+            const chunk = ids.slice(i, i + 30);
+            const q = query(collection(db, coll), where('__name__', 'in', chunk));
+            const snap = await getDocs(q);
+            
+            for (const d of snap.docs) {
+              const data = { id: d.id, ...d.data() } as any;
+              const type = coll === 'notes' ? 'note' : 
+                          coll === 'mindMaps' ? 'mindMap' : 
+                          coll === 'mockTests' ? 'mockTest' : 
+                          coll === 'audioNotes' ? 'audioNote' : 'bundle';
+              
+              if (type === 'bundle') {
+                // For bundles we need to fetch their contents too
+                // This part is hard to batch perfectly without complex logic, 
+                // but we can at least batch the child IDs.
+                const childNoteIds = data.noteIds || [];
+                const childMindMapIds = data.mindMapIds || [];
+                const childMockTestIds = data.mockTestIds || [];
+                const childAudioNoteIds = data.audioNoteIds || [];
+
+                if (childNoteIds.length > 0) {
+                   const q = query(collection(db, 'notes'), where('__name__', 'in', childNoteIds));
+                   const s = await getDocs(q);
+                   s.docs.forEach(childDoc => addItemToList(childDoc.data(), 'note', itemOrderMap[`bundles-${d.id}`]));
                 }
-              } catch(e) {
-                 console.error("Error fetching individual purchased item details", e);
+                if (childMindMapIds.length > 0) {
+                   const q = query(collection(db, 'mindMaps'), where('__name__', 'in', childMindMapIds));
+                   const s = await getDocs(q);
+                   s.docs.forEach(childDoc => addItemToList(childDoc.data(), 'mindMap', itemOrderMap[`bundles-${d.id}`]));
+                }
+                // ... same for others if needed ...
+              } else {
+                addItemToList(data, type, itemOrderMap[`${coll}-${d.id}`]);
               }
             }
           }

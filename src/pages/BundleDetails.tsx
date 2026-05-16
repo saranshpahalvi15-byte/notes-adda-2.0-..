@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, updateDoc, addDoc, limit } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
 import { getDrivePreviewUrl } from '../lib/driveUtils';
-import { ShoppingCart, CheckCircle, Layers, Star, BookOpen, Mic, BrainCircuit } from 'lucide-react';
-import { usePurchasedItems } from '../hooks/usePurchasedItems';
+import { ShoppingCart, CheckCircle, Layers, Star, BookOpen, Mic, BrainCircuit, TrendingUp } from 'lucide-react';
+import { usePurchased } from '../hooks/usePurchasedItems';
+import NoteCard from '../components/NoteCard';
+import BundleCard from '../components/BundleCard';
 
 export default function BundleDetails() {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +22,7 @@ export default function BundleDetails() {
   const [hasPurchased, setHasPurchased] = useState(false);
   const navigate = useNavigate();
   const { user, profile, setNotification } = useAuthStore();
-  const { purchasedIds } = usePurchasedItems();
+  const { purchasedIds } = usePurchased();
 
   // Review form state
   const [rating, setRating] = useState(5);
@@ -28,6 +30,8 @@ export default function BundleDetails() {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [originalPrice, setOriginalPrice] = useState(0);
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
 
   useEffect(() => {
     if (bundle && bundle.price) {
@@ -192,6 +196,33 @@ export default function BundleDetails() {
     };
 
     fetchBundleAndNotes();
+
+    // Fetch recommendations
+    const fetchRecommendations = async () => {
+      if (!id) return;
+      setLoadingRecommendations(true);
+      try {
+        const q = query(
+          collection(db, 'bundles'),
+          where('subject', '==', bundle?.subject || ''),
+          limit(5)
+        );
+        const snap = await getDocs(q);
+        const recs = snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(item => item.id !== id)
+          .slice(0, 4);
+        setRecommendations(recs);
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    if (bundle && bundle.subject) {
+      fetchRecommendations();
+    }
   }, [id, user]);
 
   const handleBuy = () => {
@@ -487,6 +518,36 @@ export default function BundleDetails() {
           <p className="text-gray-500 text-center py-8">No reviews yet. Be the first to review!</p>
         )}
       </div>
+
+      {/* Recommendations Section */}
+      {recommendations.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mt-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+              <TrendingUp className="h-6 w-6 text-indigo-600 mr-2" />
+              Similar Bundles
+            </h2>
+            <div className="h-1 flex-1 bg-gray-100 mx-6 rounded-full hidden sm:block"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recommendations.map((rec) => (
+              <BundleCard
+                key={rec.id}
+                id={rec.id}
+                title={rec.title}
+                subject={rec.subject}
+                classLevel={rec.classLevel}
+                price={rec.price}
+                discountPercent={rec.discountPercent}
+                previewImage={rec.previewImages?.[0]}
+                rating={rec.rating}
+                reviewCount={rec.reviewCount}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

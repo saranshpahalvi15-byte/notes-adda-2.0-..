@@ -40,3 +40,21 @@
     @apply font-bold text-gray-900;
   }
 }
+
+@media print {
+  .no-print, 
+  iframe,
+  img,
+  canvas,
+  .protected-content {
+    display: none !important;
+  }
+  body::after {
+    content: "PROTECTED CONTENT. PRINTING IS NOT ALLOWED.";
+    display: block;
+    text-align: center;
+    padding: 100px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+}

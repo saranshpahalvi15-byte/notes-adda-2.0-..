@@ -29,6 +29,8 @@ import MockTestGenerator from './pages/MockTestGenerator';
 import Giveaways from './pages/Giveaways';
 import Quiz from './pages/Quiz';
 
+import { PurchasedItemsProvider } from './hooks/usePurchasedItems';
+
 export default function App() {
   const { setUser, setProfile, setLoading } = useAuthStore();
 
@@ -125,29 +127,31 @@ export default function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="login" element={<Login />} />
-          <Route path="notes" element={<Notes />} />
-          <Route path="notes/:id" element={<NoteDetails />} />
-          <Route path="bundles" element={<Bundles />} />
-          <Route path="bundles/:id" element={<BundleDetails />} />
-          <Route path="mindMaps" element={<MindMaps />} />
-          <Route path="mindMaps/:id" element={<NoteDetails />} />
-          <Route path="mockTests" element={<MockTests />} />
-          <Route path="mockTests/:id" element={<NoteDetails />} />
-          <Route path="audioNotes" element={<AudioNotes />} />
-          <Route path="giveaways" element={<Giveaways />} />
-          <Route path="quiz/:noteId" element={<Quiz />} />
-          <Route path="checkout" element={<Checkout />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="terms" element={<Terms />} />
-          <Route path="privacy" element={<Privacy />} />
-          <Route path="refund" element={<Refund />} />
-          <Route path="admin/*" element={<Admin />} />
-        </Route>
-      </Routes>
+      <PurchasedItemsProvider>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="login" element={<Login />} />
+            <Route path="notes" element={<Notes />} />
+            <Route path="notes/:id" element={<NoteDetails />} />
+            <Route path="bundles" element={<Bundles />} />
+            <Route path="bundles/:id" element={<BundleDetails />} />
+            <Route path="mindMaps" element={<MindMaps />} />
+            <Route path="mindMaps/:id" element={<NoteDetails />} />
+            <Route path="mockTests" element={<MockTests />} />
+            <Route path="mockTests/:id" element={<NoteDetails />} />
+            <Route path="audioNotes" element={<AudioNotes />} />
+            <Route path="giveaways" element={<Giveaways />} />
+            <Route path="quiz/:noteId" element={<Quiz />} />
+            <Route path="checkout" element={<Checkout />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="refund" element={<Refund />} />
+            <Route path="admin/*" element={<Admin />} />
+          </Route>
+        </Routes>
+      </PurchasedItemsProvider>
     </Router>
   );
 }
