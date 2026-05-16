@@ -66,8 +66,18 @@ export default function ProtectedViewer({ children, isActive, title }: Protected
       }
     };
 
-    // Ultra-high frequency polling (up to 144Hz)
+    // Heartbeat detection to catch frame drops during system-level screenshot captures
+    let lastTime = performance.now();
     const checkFocus = () => {
+      const now = performance.now();
+      const delta = now - lastTime;
+      lastTime = now;
+
+      // If the frame took more than 100ms (typical of a screenshot tool freeze)
+      if (delta > 100) {
+        setIsBlurred(true);
+      }
+
       if (!document.hasFocus()) {
         setIsBlurred(true);
       }
@@ -75,11 +85,27 @@ export default function ProtectedViewer({ children, isActive, title }: Protected
     };
     requestRef.current = requestAnimationFrame(checkFocus);
 
+    const handleResize = () => {
+      setIsBlurred(true);
+      setTimeout(() => {
+        if (document.hasFocus()) setIsBlurred(false);
+      }, 500);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Blur on multi-finger touches (often used for screenshot gestures)
+      if (e.touches.length > 2) {
+        setIsBlurred(true);
+      }
+    };
+
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('mouseleave', handleMouseLeave);
     window.addEventListener('mouseenter', handleMouseEnter);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('click', handleClick);
     window.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('keydown', handleKeyDown, true);
@@ -91,10 +117,25 @@ export default function ProtectedViewer({ children, isActive, title }: Protected
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('mouseenter', handleMouseEnter);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('click', handleClick);
       window.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown, true);
     };
+  }, [isActive]);
+
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, [isActive]);
 
   if (!isActive) return <>{children}</>;
@@ -104,6 +145,20 @@ export default function ProtectedViewer({ children, isActive, title }: Protected
       <div className={`w-full h-full transition-all duration-0 ${isBlurred ? 'blur-3xl grayscale scale-110 opacity-0 pointer-events-none' : ''}`}>
         {children}
       </div>
+
+      {/* Floating identity watermark that follows interaction */}
+      {!isBlurred && (
+        <div 
+          className="fixed z-[100] pointer-events-none text-[10px] font-bold text-gray-900/10 whitespace-nowrap uppercase select-none transition-all duration-500"
+          style={{ 
+            left: mousePos.x + 20, 
+            top: mousePos.y + 20,
+            transform: 'rotate(-15deg)'
+          }}
+        >
+          {user?.email} • {user?.uid.slice(0, 10)}
+        </div>
+      )}
 
       {isBlurred && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-gray-900/40 backdrop-blur-md text-white p-6 text-center animate-in fade-in duration-500">
@@ -129,11 +184,19 @@ export default function ProtectedViewer({ children, isActive, title }: Protected
             Protected Mode Active
           </div>
           
-          {/* Subtle Watermark Overlay */}
-          <div className="absolute inset-0 z-[5] pointer-events-none grid grid-cols-2 grid-rows-3 opacity-[0.03] rotate-[-25deg] scale-150">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-center text-sm font-black whitespace-nowrap text-gray-900 overflow-hidden">
-                {user?.email?.split('@')[0]} • NOTESADDA • {user?.uid.slice(0, 5)}
+          {/* Aggressive Watermark Grid */}
+          <div className="absolute inset-0 z-[5] pointer-events-none grid grid-cols-3 grid-rows-6 opacity-[0.05] rotate-[-20deg] scale-125 select-none">
+            {Array.from({ length: 18 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-center text-[10px] sm:text-xs font-black whitespace-nowrap text-gray-900 border border-gray-900/5 m-2 overflow-hidden uppercase">
+                {user?.email?.split('@')[0]} • {user?.uid.slice(0, 8)} • PRIVATE
+              </div>
+            ))}
+          </div>
+
+          <div className="absolute inset-0 z-[6] pointer-events-none grid grid-cols-2 grid-rows-4 opacity-[0.03] rotate-[20deg] scale-110 select-none">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-center text-[8px] sm:text-[10px] font-bold whitespace-nowrap text-indigo-900 overflow-hidden uppercase">
+                COPYRIGHT © NOTESADDA • {new Date().getFullYear()}
               </div>
             ))}
           </div>
