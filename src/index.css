@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@media print {
+  body {
+    display: none !important;
+  }
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer utilities {
