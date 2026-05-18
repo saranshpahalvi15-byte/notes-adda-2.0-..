@@ -116,14 +116,53 @@ const Giveaways: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-indigo-900 flex items-center">
-            <Gift className="mr-3 h-8 w-8 text-indigo-600" />
-            Active Giveaways
-          </h1>
-          <p className="text-gray-600 mt-2">Participate in quizzes, score well, and win free access to premium notes!</p>
+    <div className="max-w-4xl mx-auto px-4 py-12 space-y-12">
+      <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-8 md:p-12 text-white shadow-xl shadow-indigo-500/20">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md text-white rounded-full text-xs font-bold uppercase tracking-widest mb-6 border border-white/20">
+            <Gift className="h-4 w-4" />
+            Rewards Program
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">Student Giveaways</h1>
+          <p className="text-indigo-100 text-lg md:text-xl leading-relaxed mb-8">
+            At Notes Adda, we believe in rewarding academic curiosity. Participate in our periodic giveaways to win free lifetime access to premium chapter notes, subject bundles, and exclusive mind maps.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 text-sm font-medium text-indigo-100">
+              <CheckCircle className="h-4 w-4 text-green-400" />
+              Skill-Based Winning
+            </div>
+            <div className="flex items-center gap-3 text-sm font-medium text-indigo-100">
+              <CheckCircle className="h-4 w-4 text-green-400" />
+              Weekly New Opportunities
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3 uppercase tracking-wider text-xs">How it Works</h3>
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+            Entry isn't just about luck. To qualify for our giveaways, you must complete a "Lightning Quiz" related to the subject being offered. We believe the students who engage most with the material deserve the rewards!
+          </p>
+        </div>
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3 uppercase tracking-wider text-xs">Terms & Transparency</h3>
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
+            Winners are announced automatically once the timer expires. Our system picks the top scorers from the quiz pool. If multiple students have the same top score, the one who completed the quiz fastest wins the prize.
+          </p>
+        </div>
+      </section>
+
+      <div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h2 className="text-2xl font-black text-indigo-900 flex items-center">
+              <Gift className="mr-3 h-7 w-7 text-indigo-600" />
+              Live Competitions
+            </h2>
+          </div>
         </div>
       </div>
 

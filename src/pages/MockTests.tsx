@@ -45,13 +45,59 @@ export default function MockTests() {
   const subjects = getSubjectsByClass(profile?.classLevel);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Mock Tests & Papers</h1>
-        <p className="text-gray-500 mt-2">Practice with our collection of mock tests to ace your exams.</p>
+    <div className="space-y-12">
+      <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-3xl p-8 md:p-12 text-white shadow-xl shadow-orange-500/20">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">Mock Tests & Practice Papers</h1>
+          <p className="text-orange-50 text-lg md:text-xl leading-relaxed mb-8">
+            Bridge the gap between learning and performing. Our mock tests are engineered to simulate the actual board exam environment, helping you manage time, reduce anxiety, and master the exam pattern.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-sm font-bold border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              Pattern Proof
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-sm font-bold border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-white" />
+              Time-Bound Practice
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <section className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Why Practice with Mock Tests?</h2>
+            <div className="space-y-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+              <p>
+                Knowing the syllabus is only half the battle. The other half is being able to recall that information under pressure within a strict 3-hour window. Mock tests are the ultimate physiological and psychological prep for your finals.
+              </p>
+              <p>
+                Our tests are designed by educators who have spent years marking board papers. They know exactly where students lose marks—whether it's poor diagram labeling, lack of step-wise working in math, or failing to highlight keywords in social science.
+              </p>
+            </div>
+          </div>
+          <div className="bg-orange-50 dark:bg-orange-950/20 p-6 rounded-2xl border border-orange-100 dark:border-orange-900/40">
+            <h4 className="font-bold text-orange-900 dark:text-orange-100 mb-4">Exam Day Blueprint</h4>
+            <ul className="space-y-3">
+              {[
+                'Identify recurring question types.',
+                'Master the art of answer presentation.',
+                'Improve your writing speed and legibility.',
+                'Build the stamina for long writing sessions.'
+              ].map((tip, i) => (
+                <li key={i} className="flex gap-3 text-xs text-orange-800 dark:text-orange-300">
+                  <span className="font-bold text-orange-500">{i + 1}.</span>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col sm:flex-row gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
           <select
