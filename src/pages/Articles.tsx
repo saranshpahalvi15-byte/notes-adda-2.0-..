@@ -1,12 +1,12 @@
 import React from 'react';
-import { Book, Clock, Trophy, ChevronRight } from 'lucide-react';
+import { Book, Clock, Trophy, ChevronRight, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const articles = [
   {
     id: '1',
-    title: 'Top 5 Study Techniques for Class 12 Boards',
-    summary: 'Mastering the boards requires more than just hard work. Learn about the Pomodoro technique, active recall, and spaced repetition.',
+    title: 'Top 5 Study Techniques for Class 12 Boards in 2026',
+    summary: 'Mastering the boards requires more than just long hours at your desk. In 2026, the exam pattern favors conceptual clarity over rote memorization. Learn how to implement the Pomodoro technique for better focus, active recall for testing yourself, and spaced repetition to move information from short-term to long-term memory. We also discuss how to handle the pressure of being in the "topper" bracket.',
     date: 'May 15, 2026',
     author: 'EduExpert',
     readTime: '6 min read',
@@ -14,8 +14,8 @@ const articles = [
   },
   {
     id: '2',
-    title: 'How to Build a Revision Schedule That Actually Works',
-    summary: 'A poorly planned schedule can lead to burnout. Here is how to balance your subjects and include enough downtime.',
+    title: 'Building a Revision Schedule That Actually Works',
+    summary: 'A poorly planned schedule is the fastest way to burnout and academic fatigue. Most students fail because they don\'t account for downtime and subject fatigue. In this deep dive, we show you how to structure your day according to your circadian rhythm, why you should study "hard" subjects in the morning, and the importance of taking "clean breaks" without digital distractions. Download our free schedule template inside.',
     date: 'May 12, 2026',
     author: 'NotesAdda Team',
     readTime: '8 min read',
@@ -23,12 +23,21 @@ const articles = [
   },
   {
     id: '3',
-    title: 'Visual Learning: Why Mind Maps Are Your Best Friend',
-    summary: 'Science proves that visual data is processed 60,000 times faster than text. Explore the power of Mind Maps in your revision.',
+    title: 'Visual Learning: Why Mind Maps Are Your Memory\'s Best Friend',
+    summary: 'Science proves that visual data is processed 60,000 times faster than text. For subjects like Biology and History where connections between concepts are vital, traditional flat notes often fall short. Explore the power of Mind Maps in your revision strategy. We explain the "Dual Coding Theory" and provide step-by-step instructions on how to use our pre-made mind maps to simplify complex chapters into single-page visual hubs.',
     date: 'May 10, 2026',
     author: 'ScholarPath',
     readTime: '5 min read',
     icon: <Trophy className="h-6 w-6 text-orange-600" />
+  },
+  {
+    id: '4',
+    title: 'Staying Motivated During the Long Exam Season',
+    summary: 'Motivation is a finite resource. When you have months of exams ahead, you need systems, not just "grit." This article explores the psychology of motivation, the role of dopamine in study habits, and how to set "micro-goals" to keep yourself rewarded. We also touch upon the importance of social support and knowing when to take a mental health day to prevent long-term burnout.',
+    date: 'May 08, 2026',
+    author: 'MindsetCoach',
+    readTime: '7 min read',
+    icon: <Zap className="h-6 w-6 text-yellow-600" />
   }
 ];
 
