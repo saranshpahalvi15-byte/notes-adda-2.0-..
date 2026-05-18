@@ -1,5 +1,6 @@
 {
   "name": "NotesAdda",
-  "description": "A digital platform for students in India to buy and download handwritten/printed PDF notes for classes 9-12.",
+  "description": "NotesAdda is a premier educational platform providing high-quality handwritten PDF notes, study articles, mind maps, and mock tests for Class 9-12 students.",
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
   "requestFramePermissions": ["microphone", "camera"]
 }

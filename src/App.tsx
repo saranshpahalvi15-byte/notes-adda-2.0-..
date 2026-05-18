@@ -28,6 +28,7 @@ import AudioNotes from './pages/AudioNotes';
 import MockTestGenerator from './pages/MockTestGenerator';
 import Giveaways from './pages/Giveaways';
 import Quiz from './pages/Quiz';
+import Articles from './pages/Articles';
 
 import { PurchasedItemsProvider } from './hooks/usePurchasedItems';
 
@@ -141,6 +142,7 @@ export default function App() {
             <Route path="mockTests" element={<MockTests />} />
             <Route path="mockTests/:id" element={<NoteDetails />} />
             <Route path="audioNotes" element={<AudioNotes />} />
+            <Route path="articles" element={<Articles />} />
             <Route path="giveaways" element={<Giveaways />} />
             <Route path="quiz/:noteId" element={<Quiz />} />
             <Route path="checkout" element={<Checkout />} />

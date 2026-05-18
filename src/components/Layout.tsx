@@ -97,6 +97,9 @@ export default function Layout() {
                 <Link to="/audioNotes" className="text-sm px-3 py-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors">
                   Audio Notes
                 </Link>
+                <Link to="/articles" className="text-sm px-3 py-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors">
+                  Study Articles
+                </Link>
                 <Link to="/mockTests" className="text-sm px-3 py-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium transition-colors">
                   Mock Tests
                 </Link>
@@ -242,6 +245,7 @@ export default function Layout() {
                     <li><Link to="/bundles" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">Bundles</Link></li>
                     <li><Link to="/mindMaps" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">Mind Maps</Link></li>
                     <li><Link to="/audioNotes" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">Audio Notes</Link></li>
+                    <li><Link to="/articles" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">Study Articles</Link></li>
                     <li><Link to="/mockTests" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">Mock Tests</Link></li>
                     <li><Link to="/giveaways" className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:text-indigo-700 dark:hover:text-indigo-300">Giveaways</Link></li>
                     <li><Link to="/dashboard" className="text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">My Dashboard</Link></li>
