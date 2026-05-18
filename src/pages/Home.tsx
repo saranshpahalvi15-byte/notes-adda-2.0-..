@@ -72,6 +72,9 @@ export default function Home() {
               <Award className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mr-3" />
               Best Sellers
             </h2>
+            <Link to="/bundles" className="text-indigo-600 font-bold flex items-center hover:underline">
+              See All <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -91,6 +94,46 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* Latest Study Articles Section */}
+      <section className="w-full py-12 mb-12">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+            <BookOpen className="h-8 w-8 text-indigo-600 dark:text-indigo-400 mr-3" />
+            Latest Study Guides
+          </h2>
+          <Link to="/articles" className="text-indigo-600 font-bold flex items-center hover:underline">
+            Read Blog <ArrowRight className="ml-1 h-4 w-4" />
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {[
+            {
+              id: '1',
+              title: 'Top 5 Study Techniques for Class 12 Boards in 2026',
+              summary: 'In 2026, the exam pattern favors conceptual clarity over rote memorization. Learn how to implement Pomodoro and Active Recall effectively.'
+            },
+            {
+              id: '2',
+              title: 'Building a Revision Schedule That Actually Works',
+              summary: 'Most students fail because they don\'t account for downtime. Learn how to structure your day according to your circadian rhythm.'
+            }
+          ].map(art => (
+            <Link 
+              key={art.id} 
+              to={`/articles/${art.id}`}
+              className="p-8 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-indigo-100 dark:hover:border-indigo-900 transition-all group"
+            >
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 group-hover:text-indigo-600 transition-colors">{art.title}</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">{art.summary}</p>
+              <div className="flex items-center text-indigo-600 font-bold text-sm">
+                Read Full Article <ArrowRight className="ml-2 h-4 w-4" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* Categories */}
       <section className="w-full py-12">

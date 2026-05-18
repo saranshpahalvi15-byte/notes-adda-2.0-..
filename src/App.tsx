@@ -29,6 +29,7 @@ import MockTestGenerator from './pages/MockTestGenerator';
 import Giveaways from './pages/Giveaways';
 import Quiz from './pages/Quiz';
 import Articles from './pages/Articles';
+import ArticleDetail from './pages/ArticleDetail';
 import About from './pages/About';
 import Contact from './pages/Contact';
 
@@ -145,6 +146,7 @@ export default function App() {
             <Route path="mockTests/:id" element={<NoteDetails />} />
             <Route path="audioNotes" element={<AudioNotes />} />
             <Route path="articles" element={<Articles />} />
+            <Route path="articles/:id" element={<ArticleDetail />} />
             <Route path="about" element={<About />} />
             <Route path="contact" element={<Contact />} />
             <Route path="giveaways" element={<Giveaways />} />

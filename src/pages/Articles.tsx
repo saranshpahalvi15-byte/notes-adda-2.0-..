@@ -77,9 +77,9 @@ export default function Articles() {
                   <span className="w-1 h-1 bg-gray-300 rounded-full" />
                   <span>{article.readTime}</span>
                 </div>
-                <button className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors">
+                <Link to={`/articles/${article.id}`} className="p-2 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors">
                   <ChevronRight className="h-5 w-5" />
-                </button>
+                </Link>
               </div>
             </div>
           </div>
