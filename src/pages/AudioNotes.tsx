@@ -216,22 +216,72 @@ export default function AudioNotes() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-          <Mic className="h-8 w-8 text-indigo-600 mr-3" />
-          Audio Notes
-        </h1>
-        <p className="text-gray-500 mt-2">Listen and learn with our high-quality audio notes.</p>
+    <div className="space-y-12">
+      <div className="bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-3xl p-8 md:p-12 text-white shadow-xl shadow-indigo-500/10 border border-white/5">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full text-xs font-bold uppercase tracking-widest mb-6 border border-indigo-500/30">
+            <Mic className="h-4 w-4" />
+            Audio Learning Hub
+          </div>
+          <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">Audio Study Notes</h1>
+          <p className="text-indigo-200 text-lg md:text-xl leading-relaxed mb-8">
+            Turn your commute, gym time, or rest periods into high-productivity study sessions. Our audio notes provide crisp summaries of complex chapters, narrated for maximum retention.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 text-sm font-medium text-indigo-100">
+              <div className="h-2 w-2 rounded-full bg-indigo-400" />
+              Crystal Clear Narration
+            </div>
+            <div className="flex items-center gap-3 text-sm font-medium text-indigo-100">
+              <div className="h-2 w-2 rounded-full bg-indigo-400" />
+              Syllabus Summary Focus
+            </div>
+          </div>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-12 py-8 px-4">
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Why Listen to Your Notes?</h2>
+          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            Auditory learning is a powerful but often overlooked tool in a student's arsenal. When you listen to a concept being explained, your brain processes the information differently than when you read it. This "multi-modal" approach strengthens the neural pathways associated with that concept.
+          </p>
+          <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
+            <h4 className="font-bold text-indigo-900 dark:text-indigo-100 mb-2 italic">The "Passive Study" Advantage</h4>
+            <p className="text-sm text-indigo-800 dark:text-indigo-300">
+              You can't always have a book open. Audio notes allow you to "study" while performing routine tasks, effectively adding hours of revision to your week without extra effort.
+            </p>
+          </div>
         </div>
-      ) : filteredNotes.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredNotes.map(note => {
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Optimized for Retention</h2>
+          <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            Our audio files aren't just someone reading a textbook. They are carefully scripted "micro-podcasts" that emphasize keywords, use analogies for complex topics, and include short pauses to let your brain digest the core information.
+          </p>
+          <ul className="space-y-3">
+            <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-indigo-600 font-bold">•</span>
+              Focuses on the most weightage topics first.
+            </li>
+            <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-indigo-600 font-bold">•</span>
+              Uses simple, relatable language.
+            </li>
+            <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-indigo-600 font-bold">•</span>
+              Perfect for a quick review before a class or test.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="col-span-full flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : filteredNotes.length > 0 ? (
+          filteredNotes.map(note => {
             const price = note.price !== undefined ? note.price : 5;
             const isPaid = price > 0;
             const hasPurchased = purchasedIds.has(note.id) || profile?.role === 'admin';
@@ -281,15 +331,15 @@ export default function AudioNotes() {
                   {canPlay ? 'Listen to Audio Note' : 'Unlock to Listen'}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-          <Mic className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No audio notes found matching your filters.</p>
-        </div>
-      )}
+            )
+          })
+        ) : (
+          <div className="col-span-full text-center py-12 bg-white rounded-xl border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
+            <Mic className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">No audio notes found matching your filters.</p>
+          </div>
+        )}
+      </div>
 
       {/* Audio Player Modal */}
       {selectedNote && (

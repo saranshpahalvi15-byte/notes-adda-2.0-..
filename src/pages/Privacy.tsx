@@ -36,7 +36,15 @@ export default function Privacy() {
           We implement appropriate technical and organizational security measures designed to protect the security of any personal information we process. However, please also remember that we cannot guarantee that the internet itself is 100% secure.
         </p>
 
-        <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">4. Third-Party Services</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">4. Advertising and Analytics</h2>
+        <p className="mb-4">
+          We use Google AdSense Advertising on our website. Google, as a third-party vendor, uses cookies to serve ads on our site. Google's use of the DART cookie enables it to serve ads to our users based on previous visits to our site and other sites on the Internet. Users may opt-out of the use of the DART cookie by visiting the Google Ad and Content Network privacy policy.
+        </p>
+        <p className="mb-4">
+          We, along with third-party vendors such as Google, use first-party cookies (such as the Google Analytics cookies) and third-party cookies (such as the DoubleClick cookie) or other third-party identifiers together to compile data regarding user interactions with ad impressions and other ad service functions as they relate to our website.
+        </p>
+
+        <h2 className="text-2xl font-semibold text-gray-900 mt-8 mb-4">5. Third-Party Services</h2>
         <p className="mb-4">
           We may employ third-party companies and individuals to facilitate our Service, provide the Service on our behalf, perform Service-related services, or assist us in analyzing how our Service is used (e.g., payment processors). These third parties have access to your Personal Data only to perform these tasks on our behalf.
         </p>

@@ -45,11 +45,46 @@ export default function Notes() {
   const subjects = getSubjectsByClass(profile?.classLevel);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Chapter Notes</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">Browse our collection of premium handwritten and printed notes.</p>
+    <div className="space-y-12">
+      <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-8 md:p-12 text-white shadow-xl shadow-indigo-500/20">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">Expert Chapter-wise Notes</h1>
+          <p className="text-indigo-100 text-lg md:text-xl leading-relaxed mb-8">
+            Access precision-engineered study material designed for the 2026 Board curriculum. Our handwritten and digital notes focus on conceptual clarity, active recall, and exam-oriented formatting.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-sm font-bold border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              Syllabus Aligned
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-sm font-bold border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              Expert Verified
+            </div>
+          </div>
+        </div>
       </div>
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+          <h3 className="font-bold text-lg mb-3">Why Handwritten Notes?</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+            Studies show that handwritten content improves cognitive processing and retention. Our notes mimic this personal touch to help your brain engage more effectively with complex topics.
+          </p>
+        </div>
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+          <h3 className="font-bold text-lg mb-3">Exam-Ready Formatting</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+            We don't just provide theory. Every note includes previous year question (PYQ) highlights, important definitions in call-outs, and diagrammatic explanations.
+          </p>
+        </div>
+        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+          <h3 className="font-bold text-lg mb-3">Digital Portability</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+            Carry your entire library in your pocket. High-resolution PDFs optimized for tablets and smartphones ensure you can study anywhere, anytime.
+          </p>
+        </div>
+      </section>
 
       <div className="flex flex-col sm:flex-row gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div className="flex-1">

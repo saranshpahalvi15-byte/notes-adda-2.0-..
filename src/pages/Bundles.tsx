@@ -65,13 +65,63 @@ export default function Bundles() {
   const subjects = getSubjectsByClass(profile?.classLevel);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Subject Bundles</h1>
-        <p className="text-gray-500 mt-2">Get complete subjects at a discounted price of ₹249.</p>
+    <div className="space-y-12">
+      <div className="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-3xl p-8 md:p-12 text-white shadow-xl shadow-blue-500/20">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">Comprehensive Subject Bundles</h1>
+          <p className="text-blue-50 text-lg md:text-xl leading-relaxed mb-8">
+            Master an entire subject with our curated bundles. Each bundle contains all chapters, formula sheets, and mock tests for a complete academic session—at a fraction of the individual cost.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-sm font-bold border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-orange-400" />
+              Save up to 40%
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-sm font-bold border border-white/10">
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+              Full Session Coverage
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+      <section className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8 md:p-12">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <h2 className="text-2xl font-bold text-center">What's Inside Every Bundle?</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 text-sm">
+            <div className="flex gap-4">
+              <div className="h-10 w-10 shrink-0 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center font-bold text-indigo-600">01</div>
+              <div>
+                <h4 className="font-bold mb-1">Detailed Chapter Notes</h4>
+                <p className="text-gray-500">Every single chapter covered in depth with handwritten precision.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="h-10 w-10 shrink-0 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center font-bold text-indigo-600">02</div>
+              <div>
+                <h4 className="font-bold mb-1">Integrated Mind Maps</h4>
+                <p className="text-gray-500">Visual summaries included for every unit to speed up your revision.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="h-10 w-10 shrink-0 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center font-bold text-indigo-600">03</div>
+              <div>
+                <h4 className="font-bold mb-1">Formula & Concept Sheets</h4>
+                <p className="text-gray-500">Quick-reference sheets for all major numerical formulas and theories.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="h-10 w-10 shrink-0 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center font-bold text-indigo-600">04</div>
+              <div>
+                <h4 className="font-bold mb-1">Practice Mock Tests</h4>
+                <p className="text-gray-500">Subject-wide testing to ensure you are ready for the final boards.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="flex flex-col sm:flex-row gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
           <select
